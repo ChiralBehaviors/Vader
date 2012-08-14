@@ -44,6 +44,7 @@ import com.hellblazer.process.NoLocalJmxConnectionException;
  * @author Hal Hildebrand
  * 
  */
+@SuppressWarnings("restriction")
 public class JavaProcessImpl implements JavaProcess, Cloneable {
     private static final long        serialVersionUID = 1L;
     protected List<String>           arguments;

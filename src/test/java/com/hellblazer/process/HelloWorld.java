@@ -43,6 +43,7 @@ import com.sun.jmx.remote.internal.RMIExporter;
  * @author Hal Hildebrand
  * 
  */
+@SuppressWarnings("restriction")
 public class HelloWorld implements RMIExporter {
     static void bindJmx() throws Exception {
         JMXConnectorServer server;

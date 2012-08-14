@@ -112,6 +112,14 @@ public class UnixProcess extends AbstractManagedProcess {
             throw new IllegalStateException(
                                             "Unable to retrieve exit value of process ["
                                                     + id + "]");
+        } finally {
+            if (is != null) {
+                try {
+                    is.close();
+                } catch (IOException e) {
+                    log.fine(String.format("error closing", e));
+                }
+            }
         }
         try {
             reader.close();
@@ -374,6 +382,11 @@ public class UnixProcess extends AbstractManagedProcess {
                                                                                                     pidFile)));
             String pidNum = pidStream.readLine();
             if (pidNum == null) {
+                try {
+                    pidStream.close();
+                } catch (IOException e) {
+                    log.fine(String.format("error closing stream", e));
+                }
                 throw new IllegalStateException("pid is empty <" + pidFile
                                                 + ">");
             }
