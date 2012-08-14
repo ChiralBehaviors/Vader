@@ -24,6 +24,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.net.ConnectException;
 import java.net.URL;
 import java.util.Set;
 import java.util.jar.Attributes;
@@ -208,11 +209,7 @@ public class JavaProcessTest extends ProcessTest {
         }
     }
 
-    @SuppressWarnings("unused")
     public void testLocalMBeanServerConnection() throws Exception {
-        if (true) {
-            return; // Until I get this working again.
-        }
         copyTestClassFile();
         final JavaProcess process = new JavaProcessImpl(processFactory.create());
         int sleepTime = 60000;
@@ -223,6 +220,7 @@ public class JavaProcessTest extends ProcessTest {
         process.start();
 
         assertTrue("process is active", process.isActive());
+        // Thread.sleep(3000);
 
         Condition condition = new Condition() {
             @Override
@@ -230,6 +228,8 @@ public class JavaProcessTest extends ProcessTest {
                 try {
                     connection = process.getLocalMBeanServerConnection();
                     return true;
+                } catch (ConnectException e) {
+                    return false;
                 } catch (NoLocalJmxConnectionException e) {
                     return false;
                 } catch (IOException e) {
