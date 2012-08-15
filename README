@@ -2,7 +2,7 @@ Vader - Process control in Java
 
 Licensed under the LGPL v2.1
 
-Build with Maven 2.x:
+Build with Maven 3.x:
 
 cd to the root directory and then:
 
