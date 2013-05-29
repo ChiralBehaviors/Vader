@@ -597,7 +597,9 @@ public class JavaProcessImpl implements JavaProcess, Cloneable {
      */
     @Override
     public synchronized void start() throws IOException {
-        assert javaExecutable != null;
+        if (javaExecutable == null) {
+            throw new IllegalStateException("Java executable must not be null");
+        }
         if (vmOptions == null) {
             vmOptions = new ArrayList<String>();
         }
