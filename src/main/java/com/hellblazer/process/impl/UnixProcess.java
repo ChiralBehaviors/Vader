@@ -233,7 +233,7 @@ public class UnixProcess extends AbstractManagedProcess {
 	    return true;
 	}
 	for (String state : VALID_STATES) {
-	    if (line.startsWith(state) && line.length() == 4) {
+	    if (line.startsWith(state)) {
 		return false;
 	    }
 	}
