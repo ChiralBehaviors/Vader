@@ -181,11 +181,13 @@ public class UnixProcess extends AbstractManagedProcess {
 	    return "";
 	}
 
-	String line;
+	String line; 
 	try {
 	    line = reader.readLine();
+	    System.out.println("**** " + line);
 	    while (line != null && !line.startsWith("STAT")) {
 		line = reader.readLine();
+		    System.out.println("**** " + line);
 	    }
 	} catch (IOException e) {
 	    throw new IllegalStateException("Unable to parse status for pid="
