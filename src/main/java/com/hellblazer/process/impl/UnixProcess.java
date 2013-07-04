@@ -42,6 +42,8 @@ public class UnixProcess extends AbstractManagedProcess {
     private static final Logger log = Logger.getLogger(UnixProcess.class
 	    .getCanonicalName());
     private static final long serialVersionUID = 1L;
+    private static final String[] VALID_STATES = new String[] { "D", "R", "S",
+	    "T", "Z", "U", "I", "L", "W" };
 
     protected int exitValue = -1;
     protected int pid = -1;
@@ -167,7 +169,7 @@ public class UnixProcess extends AbstractManagedProcess {
 	try {
 	    psProc = ps.start();
 	} catch (IOException e) {
-	    throw new IllegalStateException("Unable to start ps -o state-p "
+	    throw new IllegalStateException("Unable to start ps -o state -p "
 		    + thePid, e);
 	}
 
@@ -181,13 +183,13 @@ public class UnixProcess extends AbstractManagedProcess {
 	    return "";
 	}
 
-	String line; 
+	String line;
 	try {
 	    line = reader.readLine();
 	    System.out.println("**** " + line);
-	    while (line != null && !line.startsWith("STAT")) {
+	    while (line != null && invalidStatus(line)) {
 		line = reader.readLine();
-		    System.out.println("**** " + line);
+		System.out.println("**** " + line);
 	    }
 	} catch (IOException e) {
 	    throw new IllegalStateException("Unable to parse status for pid="
@@ -224,6 +226,18 @@ public class UnixProcess extends AbstractManagedProcess {
 	    log.fine("pid=" + pid + " status: " + line);
 	}
 	return line;
+    }
+
+    private boolean invalidStatus(String line) {
+	if (line.startsWith("STAT")) {
+	    return true;
+	}
+	for (String state : VALID_STATES) {
+	    if (line.startsWith(state) && line.length() == 4) {
+		return false;
+	    }
+	}
+	return true;
     }
 
     protected File getScriptFile() {
