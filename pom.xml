@@ -5,7 +5,7 @@
 	<groupId>com.hellblazer</groupId>
 	<artifactId>process-control</artifactId>
 	<name>Process control in Java</name>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>0.0.1</version>
 
 	<build>
 		<plugins>
