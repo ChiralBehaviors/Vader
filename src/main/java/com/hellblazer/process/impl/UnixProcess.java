@@ -207,8 +207,7 @@ public class UnixProcess extends AbstractManagedProcess {
 	}
 
 	if (line == null) {
-	    throw new IllegalStateException("Unable to parse status for pid="
-		    + thePid + ", no output!");
+            return null; // process does not exist
 	}
 
 	if ("STAT".equals(line)) {
