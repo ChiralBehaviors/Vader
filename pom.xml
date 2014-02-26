@@ -5,7 +5,7 @@
 	<groupId>com.hellblazer</groupId>
 	<artifactId>process-control</artifactId>
 	<name>Process control in Java</name>
-	<version>0.0.2</version>
+	<version>0.0.3-SNAPSHOT</version>
 
 	<build>
 		<plugins>
@@ -23,6 +23,22 @@
 				<version>2.7.1</version>
 				<configuration>
 					<forkMode>always</forkMode>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-source-plugin</artifactId>
+				<version>2.2.1</version>
+				<executions>
+					<execution>
+						<id>attach-sources</id>
+						<goals>
+							<goal>jar</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<attach>true</attach>
 				</configuration>
 			</plugin>
 		</plugins>
