@@ -25,11 +25,26 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import org.apache.commons.io.input.Tailer;
+import org.apache.commons.io.input.TailerListener;
+
 /**
  * @author Hal Hildebrand
  * 
  */
 public interface ManagedProcess extends Serializable {
+
+    /**
+     * Returns the exit value for the subprocess.
+     * 
+     * @return the exit value of the subprocess represented by this
+     *         <code>ManagedProcess</code> object. by convention, the value
+     *         <code>0</code> indicates normal termination.
+     * @exception IllegalThreadStateException
+     *                if the subprocess represented by this <code>Process</code>
+     *                object has not yet terminated.
+     */
+    public int getExitValue();
 
     void addCommand(String command);
 
@@ -73,18 +88,6 @@ public interface ManagedProcess extends Serializable {
      * @return the Map which represents the environment the processs executes
      */
     Map<String, String> getEnvironment();
-
-    /**
-     * Returns the exit value for the subprocess.
-     * 
-     * @return the exit value of the subprocess represented by this
-     *         <code>ManagedProcess</code> object. by convention, the value
-     *         <code>0</code> indicates normal termination.
-     * @exception IllegalThreadStateException
-     *                if the subprocess represented by this <code>Process</code>
-     *                object has not yet terminated.
-     */
-    public int getExitValue();
 
     /**
      * @return the UUID that uniquely identifies this process
@@ -199,6 +202,22 @@ public interface ManagedProcess extends Serializable {
     void stop(int waitForSeconds) throws CannotStopProcessException;
 
     /**
+     * Add a listener to tail the STDERR stream
+     * 
+     * @param listener
+     */
+    Tailer tailStdErr(TailerListener listener, long delayMillis, boolean end,
+                      boolean reOpen, int bufSize);
+
+    /**
+     * Add a listener to tail the STDOUT stream
+     * 
+     * @param listener
+     */
+    Tailer tailStdOut(TailerListener listener, long delayMillis, boolean end,
+                      boolean reOpen, int bufSize);
+
+    /**
      * causes the current thread to wait, if necessary, until the process
      * represented by this <code>Process</code> object has terminated. This
      * method returns immediately if the subprocess has already terminated. If
@@ -213,5 +232,5 @@ public interface ManagedProcess extends Serializable {
      *                the wait is ended and an {@link InterruptedException} is
      *                thrown.
      */
-    public int waitFor() throws InterruptedException;
+    int waitFor() throws InterruptedException;
 }

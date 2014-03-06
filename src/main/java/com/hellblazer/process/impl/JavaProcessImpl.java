@@ -33,6 +33,9 @@ import javax.management.remote.JMXConnectorFactory;
 import javax.management.remote.JMXServiceURL;
 import javax.security.auth.Subject;
 
+import org.apache.commons.io.input.Tailer;
+import org.apache.commons.io.input.TailerListener;
+
 import sun.management.ConnectorAddressLink;
 
 import com.hellblazer.process.CannotStopProcessException;
@@ -217,22 +220,6 @@ public class JavaProcessImpl implements JavaProcess, Cloneable {
     @Override
     public Map<String, String> getEnvironment() {
         return process.getEnvironment();
-    }
-
-    /**
-     * @return the List which represents the arguments to the VM invocation to
-     *         run the Java program
-     */
-    protected List<String> getExecution() {
-        assert !(jarFile != null && javaClass != null); // can't execute jar and java class simultaneously
-        ArrayList<String> execution = new ArrayList<String>();
-        if (jarFile != null) {
-            execution.add("-jar");
-            execution.add(jarFile.getAbsolutePath());
-        } else {
-            execution.add(javaClass);
-        }
-        return execution;
     }
 
     @Override
@@ -626,6 +613,24 @@ public class JavaProcessImpl implements JavaProcess, Cloneable {
         process.stop(waitForSeconds);
     }
 
+    /* (non-Javadoc)
+     * @see com.hellblazer.process.ManagedProcess#tailStdErr(org.apache.commons.io.input.TailerListener, long, boolean, boolean, int)
+     */
+    @Override
+    public Tailer tailStdErr(TailerListener listener, long delayMillis,
+                             boolean end, boolean reOpen, int bufSize) {
+        return process.tailStdErr(listener, delayMillis, end, reOpen, bufSize);
+    }
+
+    /* (non-Javadoc)
+     * @see com.hellblazer.process.ManagedProcess#tailStdOut(org.apache.commons.io.input.TailerListener, long, boolean, boolean, int)
+     */
+    @Override
+    public Tailer tailStdOut(TailerListener listener, long delayMillis,
+                             boolean end, boolean reOpen, int bufSize) {
+        return tailStdOut(listener, delayMillis, end, reOpen, bufSize);
+    }
+
     @Override
     public String toString() {
         StringBuffer buf = new StringBuffer();
@@ -641,6 +646,22 @@ public class JavaProcessImpl implements JavaProcess, Cloneable {
     @Override
     public int waitFor() throws InterruptedException {
         return process.waitFor();
+    }
+
+    /**
+     * @return the List which represents the arguments to the VM invocation to
+     *         run the Java program
+     */
+    protected List<String> getExecution() {
+        assert !(jarFile != null && javaClass != null); // can't execute jar and java class simultaneously
+        ArrayList<String> execution = new ArrayList<String>();
+        if (jarFile != null) {
+            execution.add("-jar");
+            execution.add(jarFile.getAbsolutePath());
+        } else {
+            execution.add(javaClass);
+        }
+        return execution;
     }
 
 }
