@@ -664,4 +664,19 @@ public class JavaProcessImpl implements JavaProcess, Cloneable {
         return execution;
     }
 
+    /* (non-Javadoc)
+     * @see com.hellblazer.process.ManagedProcess#tailStdErr(org.apache.commons.io.input.TailerListener)
+     */
+    @Override
+    public Tailer tailStdErr(TailerListener listener) {
+        return process.tailStdErr(listener);
+    }
+
+    /* (non-Javadoc)
+     * @see com.hellblazer.process.ManagedProcess#tailStdOut(org.apache.commons.io.input.TailerListener)
+     */
+    @Override
+    public Tailer tailStdOut(TailerListener listener) {
+        return process.tailStdOut(listener);
+    }
 }

@@ -121,7 +121,9 @@ abstract public class AbstractManagedProcess implements ManagedProcess,
     protected File                controlDirectory;
 
     protected File                directory;
+
     protected Map<String, String> environment;
+
     protected final UUID          id;
     protected volatile boolean    terminated = false;
 
@@ -394,10 +396,26 @@ abstract public class AbstractManagedProcess implements ManagedProcess,
      * @see com.hellblazer.process.ManagedProcess#tailStdErr(org.apache.commons.io.input.TailerListener)
      */
     @Override
+    public Tailer tailStdErr(TailerListener listener) {
+        return Tailer.create(getStdErrFile(), listener);
+    }
+
+    /* (non-Javadoc)
+     * @see com.hellblazer.process.ManagedProcess#tailStdErr(org.apache.commons.io.input.TailerListener)
+     */
+    @Override
     public Tailer tailStdErr(TailerListener listener, long delayMillis,
                              boolean end, boolean reOpen, int bufSize) {
         return Tailer.create(getStdErrFile(), listener, delayMillis, end,
                              reOpen, bufSize);
+    }
+
+    /* (non-Javadoc)
+     * @see com.hellblazer.process.ManagedProcess#tailStdOut(org.apache.commons.io.input.TailerListener)
+     */
+    @Override
+    public Tailer tailStdOut(TailerListener listener) {
+        return Tailer.create(getStdOutFile(), listener);
     }
 
     /* (non-Javadoc)

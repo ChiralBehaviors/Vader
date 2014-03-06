@@ -209,6 +209,8 @@ public interface ManagedProcess extends Serializable {
     Tailer tailStdErr(TailerListener listener, long delayMillis, boolean end,
                       boolean reOpen, int bufSize);
 
+    Tailer tailStdErr(TailerListener listener);
+
     /**
      * Add a listener to tail the STDOUT stream
      * 
@@ -216,6 +218,8 @@ public interface ManagedProcess extends Serializable {
      */
     Tailer tailStdOut(TailerListener listener, long delayMillis, boolean end,
                       boolean reOpen, int bufSize);
+
+    Tailer tailStdOut(TailerListener listener);
 
     /**
      * causes the current thread to wait, if necessary, until the process
