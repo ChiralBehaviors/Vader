@@ -7,6 +7,13 @@
 	<name>Process control in Java</name>
 	<version>0.0.3-SNAPSHOT</version>
 
+	<repositories>
+		<repository>
+			<id>hellblazer-snapshots</id>
+			<url>http://repository-hal900000.forge.cloudbees.com/snapshot/</url>
+		</repository>
+	</repositories>
+
 	<build>
 		<plugins>
 			<plugin>
