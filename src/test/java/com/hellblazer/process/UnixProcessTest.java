@@ -27,6 +27,7 @@ import java.util.UUID;
 import com.hellblazer.process.impl.AbstractManagedProcess;
 import com.hellblazer.process.impl.JavaProcessImpl;
 import com.hellblazer.process.impl.UnixProcess;
+import com.hellblazer.utils.Utils;
 
 /**
  * @author Hal Hildebrand

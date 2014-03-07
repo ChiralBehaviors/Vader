@@ -37,6 +37,8 @@ import javax.management.ObjectName;
 
 import com.hellblazer.process.impl.JavaProcessImpl;
 import com.hellblazer.process.impl.ManagedProcessFactoryImpl;
+import com.hellblazer.utils.Condition;
+import com.hellblazer.utils.Utils;
 
 /**
  * @author Hal Hildebrand
