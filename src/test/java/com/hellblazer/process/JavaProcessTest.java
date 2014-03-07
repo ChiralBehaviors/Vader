@@ -26,7 +26,10 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.ConnectException;
 import java.net.URL;
+import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.jar.Attributes;
 import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
@@ -34,6 +37,9 @@ import java.util.jar.Manifest;
 
 import javax.management.MBeanServerConnection;
 import javax.management.ObjectName;
+
+import org.apache.commons.io.input.Tailer;
+import org.apache.commons.io.input.TailerListener;
 
 import com.hellblazer.process.impl.JavaProcessImpl;
 import com.hellblazer.process.impl.ManagedProcessFactoryImpl;
@@ -287,5 +293,70 @@ public class JavaProcessTest extends ProcessTest {
         } finally {
             reader.close();
         }
+    }
+
+    public void testTailStdOut() throws Exception {
+        final List<String> lines = new CopyOnWriteArrayList<>();
+        final AtomicReference<Tailer> t = new AtomicReference<>();
+        TailerListener listener = new TailerListener() {
+
+            @Override
+            public void init(Tailer tailer) {
+                t.set(tailer);
+            }
+
+            @Override
+            public void handle(Exception ex) {
+            }
+
+            @Override
+            public void handle(String line) {
+                lines.add(line);
+            }
+
+            @Override
+            public void fileRotated() {
+            }
+
+            @Override
+            public void fileNotFound() {
+            }
+        };
+        copyTestClassFile();
+        JavaProcess process = new JavaProcessImpl(processFactory.create());
+        String testLine = "hello";
+        process.setArguments(new String[] { "-readln", testLine });
+        process.setJavaClass(HelloWorld.class.getCanonicalName());
+        process.setDirectory(testDir);
+        process.setJavaExecutable(javaBin);
+        process.start();
+        process.tailStdOut(listener);
+        assertNotNull(t.get());
+        Thread tailerThread = new Thread(t.get());
+        tailerThread.setDaemon(true);
+        tailerThread.start();
+        PrintWriter writer = new PrintWriter(
+                                             new OutputStreamWriter(
+                                                                    process.getStdIn()));
+        try {
+            writer.println(testLine);
+            writer.flush();
+        } finally {
+            writer.close();
+        }
+
+        assertEquals("Process exited normally", 0, process.waitFor());
+        assertTrue("Process not active", !process.isActive());
+        Utils.waitForCondition(1000, new Condition() {
+            @Override
+            public boolean isTrue() {
+                return lines.size() > 0;
+            }
+        });
+        assertEquals(2, lines.size());
+        assertEquals(testLine, lines.get(0));
+        assertEquals(testLine, lines.get(1));
+
+        t.get().stop();
     }
 }
