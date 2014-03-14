@@ -39,12 +39,13 @@ public interface ManagedProcess extends Serializable {
      * 
      * @return the exit value of the subprocess represented by this
      *         <code>ManagedProcess</code> object. by convention, the value
-     *         <code>0</code> indicates normal termination.
+     *         <code>0</code> indicates normal termination. If null, there is no
+     *         return value yet.
      * @exception IllegalThreadStateException
      *                if the subprocess represented by this <code>Process</code>
      *                object has not yet terminated.
      */
-    public int getExitValue();
+    public Integer getExitValue();
 
     void addCommand(String command);
 
@@ -97,7 +98,7 @@ public interface ManagedProcess extends Serializable {
     /**
      * @return the host OS pid for this process
      */
-    int getPid();
+    Integer getPid();
 
     /**
      * @return the InputStream of the process' STD ERR stream (i.e. file handle

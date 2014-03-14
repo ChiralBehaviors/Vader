@@ -223,7 +223,7 @@ public class JavaProcessImpl implements JavaProcess, Cloneable {
     }
 
     @Override
-    public int getExitValue() {
+    public Integer getExitValue() {
         return process.getExitValue();
     }
 
@@ -366,7 +366,7 @@ public class JavaProcessImpl implements JavaProcess, Cloneable {
     }
 
     @Override
-    public int getPid() {
+    public Integer getPid() {
         return process.getPid();
     }
 

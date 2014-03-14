@@ -38,313 +38,319 @@ import com.hellblazer.process.CannotStopProcessException;
  * 
  */
 public class UnixProcess extends AbstractManagedProcess {
-    private static String[] activeStates = new String[] { "U", "I", "R", "S" };
-    private static final Logger log = Logger.getLogger(UnixProcess.class
-	    .getCanonicalName());
-    private static final long serialVersionUID = 1L;
-    private static final String[] VALID_STATES = new String[] { "D", "R", "S",
-	    "T", "Z", "U", "I", "L", "W" };
+    private static String[]       activeStates     = new String[] { "U", "I",
+            "R", "S"                              };
+    private static final Logger   log              = Logger.getLogger(UnixProcess.class.getCanonicalName());
+    private static final long     serialVersionUID = 1L;
+    private static final String[] VALID_STATES     = new String[] { "D", "R",
+            "S", "T", "Z", "U", "I", "L", "W"     };
 
-    protected int exitValue = -1;
-    protected int pid = -1;
-    protected int wrapperPid = -1;
+    protected Integer             exitValue;
+    protected Integer             pid;
+    protected int                 wrapperPid;
 
     public UnixProcess() {
-	super();
+        super();
     }
 
     public UnixProcess(UUID id) {
-	super(id);
+        super(id);
     }
 
     @Override
     public void acquireFromHome(File homeDirectory) {
-	setDirectory(homeDirectory);
-	try {
-	    wrapperPid = readPid(getWrapperPidFile());
-	    pid = readPid(getPidFile());
-	} catch (IllegalStateException e) {
-	    // process not started
-	}
+        setDirectory(homeDirectory);
+        try {
+            wrapperPid = readPid(getWrapperPidFile());
+            pid = readPid(getPidFile());
+        } catch (IllegalStateException e) {
+            // process not started
+        }
     }
 
     @Override
     protected void execute() throws IOException {
-	writeScript();
-	List<String> scriptCmnds = new ArrayList<String>();
-	scriptCmnds.add("/bin/sh");
-	scriptCmnds.add(getScriptFile().getAbsolutePath());
-	primitiveExecute(scriptCmnds);
+        writeScript();
+        List<String> scriptCmnds = new ArrayList<String>();
+        scriptCmnds.add("/bin/sh");
+        scriptCmnds.add(getScriptFile().getAbsolutePath());
+        primitiveExecute(scriptCmnds);
     }
 
     /**
      * @return the array of strings which represent active process state
      */
     protected String[] getActiveStates() {
-	return activeStates;
+        return activeStates;
     }
 
     @Override
-    public int getExitValue() {
-	if (pid == -1 || terminated) {
-	    return exitValue;
-	}
-	File exitValueFile = getExitValueFile();
+    public Integer getExitValue() {
+        if (pid == null || terminated) {
+            return exitValue;
+        }
+        File exitValueFile = getExitValueFile();
 
-	if (log.isLoggable(Level.FINE)) {
-	    log.fine("looking for exit value file: "
-		    + exitValueFile.getAbsolutePath());
-	}
-	FileInputStream is = null;
-	try {
-	    is = new FileInputStream(exitValueFile);
-	} catch (FileNotFoundException e1) {
-	    throw new IllegalThreadStateException("Process has not terminated");
-	}
-	BufferedReader reader = new BufferedReader(new InputStreamReader(is));
-	String line = null;
-	try {
-	    line = reader.readLine();
-	    exitValue = Integer.parseInt(line);
-	} catch (NumberFormatException e) {
-	    throw new IllegalStateException("Unable to parse exit value: {"
-		    + line + "} of process [" + id + "]");
-	} catch (IOException e) {
-	    throw new IllegalStateException(
-		    "Unable to retrieve exit value of process [" + id + "]");
-	} finally {
-	    if (is != null) {
-		try {
-		    is.close();
-		} catch (IOException e) {
-		    log.fine(String.format("error closing", e));
-		}
-	    }
-	}
-	try {
-	    reader.close();
-	} catch (IOException e) {
-	    // ignore
-	}
-	return exitValue;
+        if (log.isLoggable(Level.FINE)) {
+            log.fine("looking for exit value file: "
+                     + exitValueFile.getAbsolutePath());
+        }
+        FileInputStream is = null;
+        try {
+            is = new FileInputStream(exitValueFile);
+        } catch (FileNotFoundException e1) {
+            throw new IllegalThreadStateException("Process has not terminated");
+        }
+        BufferedReader reader = new BufferedReader(new InputStreamReader(is));
+        String line = null;
+        try {
+            line = reader.readLine();
+            exitValue = Integer.parseInt(line);
+        } catch (NumberFormatException e) {
+            throw new IllegalStateException("Unable to parse exit value: {"
+                                            + line + "} of process [" + id
+                                            + "]");
+        } catch (IOException e) {
+            throw new IllegalStateException(
+                                            "Unable to retrieve exit value of process ["
+                                                    + id + "]");
+        } finally {
+            if (is != null) {
+                try {
+                    is.close();
+                } catch (IOException e) {
+                    log.fine(String.format("error closing", e));
+                }
+            }
+        }
+        try {
+            reader.close();
+        } catch (IOException e) {
+            // ignore
+        }
+        return exitValue;
     }
 
     protected File getExitValueFile() {
-	return new File(directory, getExitValueFileName());
+        return new File(directory, getExitValueFileName());
     }
 
     protected String getExitValueFileName() {
-	return inControlDirectory("exit.value");
+        return inControlDirectory("exit.value");
     }
 
     @Override
-    public int getPid() {
-	return pid;
+    public Integer getPid() {
+        return pid;
     }
 
     protected File getPidFile() {
-	return new File(directory, getPidFileName());
+        return new File(directory, getPidFileName());
     }
 
     protected String getPidFileName() {
-	return inControlDirectory("pid");
+        return inControlDirectory("pid");
     }
 
     /**
      * @return
      */
     protected String getProcessStatus(int thePid) {
-	if (thePid == -1) {
-	    return null;
-	}
-	ProcessBuilder ps = new ProcessBuilder();
-	ps.command(new String[] { "ps", "-o", "state", "-p",
-		String.valueOf(thePid) });
-	ps.redirectErrorStream(true);
+        if (thePid == -1) {
+            return null;
+        }
+        ProcessBuilder ps = new ProcessBuilder();
+        ps.command(new String[] { "ps", "-o", "state", "-p",
+                String.valueOf(thePid) });
+        ps.redirectErrorStream(true);
 
-	if (log.isLoggable(Level.FINE)) {
-	    log.fine("requesting process status: " + ps.command());
-	}
-	Process psProc;
-	try {
-	    psProc = ps.start();
-	} catch (IOException e) {
-	    throw new IllegalStateException("Unable to start ps -o state -p "
-		    + thePid, e);
-	}
+        if (log.isLoggable(Level.FINE)) {
+            log.fine("requesting process status: " + ps.command());
+        }
+        Process psProc;
+        try {
+            psProc = ps.start();
+        } catch (IOException e) {
+            throw new IllegalStateException("Unable to start ps -o state -p "
+                                            + thePid, e);
+        }
 
-	BufferedReader reader = new BufferedReader(new InputStreamReader(
-		psProc.getInputStream()));
+        BufferedReader reader = new BufferedReader(
+                                                   new InputStreamReader(
+                                                                         psProc.getInputStream()));
 
-	int status;
-	try {
-	    status = psProc.waitFor();
-	} catch (InterruptedException e) {
-	    return "";
-	}
+        int status;
+        try {
+            status = psProc.waitFor();
+        } catch (InterruptedException e) {
+            return "";
+        }
 
-	String line;
-	try {
-	    line = reader.readLine();
-	    while (line != null && invalidStatus(line)) {
-		line = reader.readLine();
-	    }
-	} catch (IOException e) {
-	    throw new IllegalStateException("Unable to parse status for pid="
-		    + thePid, e);
-	}
+        String line;
+        try {
+            line = reader.readLine();
+            while (line != null && invalidStatus(line)) {
+                line = reader.readLine();
+            }
+        } catch (IOException e) {
+            throw new IllegalStateException("Unable to parse status for pid="
+                                            + thePid, e);
+        }
 
-	if (status == 1) {
-	    return null; // process does not exist
-	}
-
-	if (status != 0) {
-	    log.severe("Retrieval of status for pid=" + thePid
-		    + " failed with status code " + status);
-	    logStatusErrorOutput(reader, line);
-	    throw new IllegalStateException("Retrieval of status for pid="
-		    + thePid + " failed with status code " + status);
-	}
-
-	if (line == null) {
+        if (status == 1) {
             return null; // process does not exist
-	}
+        }
 
-	if ("STAT".equals(line)) {
-	    log.fine("ignoring 'STAT' header");
-	    try {
-		line = reader.readLine();
-	    } catch (IOException e) {
-		throw new IllegalStateException(
-			"Unable to parse status for pid=" + thePid, e);
-	    }
-	}
-	if (log.isLoggable(Level.FINE)) {
-	    log.fine("pid=" + pid + " status: " + line);
-	}
-	return line;
+        if (status != 0) {
+            log.severe("Retrieval of status for pid=" + thePid
+                       + " failed with status code " + status);
+            logStatusErrorOutput(reader, line);
+            throw new IllegalStateException("Retrieval of status for pid="
+                                            + thePid
+                                            + " failed with status code "
+                                            + status);
+        }
+
+        if (line == null) {
+            return null; // process does not exist
+        }
+
+        if ("STAT".equals(line)) {
+            log.fine("ignoring 'STAT' header");
+            try {
+                line = reader.readLine();
+            } catch (IOException e) {
+                throw new IllegalStateException(
+                                                "Unable to parse status for pid="
+                                                        + thePid, e);
+            }
+        }
+        if (log.isLoggable(Level.FINE)) {
+            log.fine("pid=" + pid + " status: " + line);
+        }
+        return line;
     }
 
     private boolean invalidStatus(String line) {
-	if (line.startsWith("STAT")) {
-	    return true;
-	}
-	for (String state : VALID_STATES) {
-	    if (line.startsWith(state)) {
-		return false;
-	    }
-	}
-	return true;
+        if (line.startsWith("STAT")) {
+            return true;
+        }
+        for (String state : VALID_STATES) {
+            if (line.startsWith(state)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     protected File getScriptFile() {
-	return new File(directory, getScriptFileName());
+        return new File(directory, getScriptFileName());
     }
 
     protected String getScriptFileName() {
-	return inControlDirectory("run.sh");
+        return inControlDirectory("run.sh");
     }
 
     protected File getWrapperPidFile() {
-	return new File(directory, getWrapperPidFileName());
+        return new File(directory, getWrapperPidFileName());
     }
 
     protected String getWrapperPidFileName() {
-	return inControlDirectory("wrapper.pid");
+        return inControlDirectory("wrapper.pid");
     }
 
     @Override
     public boolean isActive() {
-	return isActive(pid);
+        return isActive(pid);
     }
 
-    public boolean isActive(int thePid) {
-	if (thePid == -1) {
-	    if (log.isLoggable(Level.FINE)) {
-		log.fine("inactive, pid == -1 for " + this);
-	    }
-	    return false;
-	}
-	String status = getProcessStatus(thePid);
-	if (status == null) {
-	    if (log.isLoggable(Level.FINE)) {
-		log.fine("inactive, no status for " + this);
-	    }
-	    return false;
-	}
-	for (String active : getActiveStates()) {
-	    if (status.startsWith(active)) {
-		return true;
-	    }
-	}
-	if (log.isLoggable(Level.FINE)) {
-	    log.fine("inactive, status is " + status + " for " + this);
-	}
-	return false;
+    public boolean isActive(Integer thePid) {
+        if (thePid == null) {
+            if (log.isLoggable(Level.FINE)) {
+                log.fine("inactive for " + this);
+            }
+            return false;
+        }
+        String status = getProcessStatus(thePid);
+        if (status == null) {
+            if (log.isLoggable(Level.FINE)) {
+                log.fine("inactive, no status for " + this);
+            }
+            return false;
+        }
+        for (String active : getActiveStates()) {
+            if (status.startsWith(active)) {
+                return true;
+            }
+        }
+        if (log.isLoggable(Level.FINE)) {
+            log.fine("inactive, status is " + status + " for " + this);
+        }
+        return false;
     }
 
     /**
      * @return true if the process is well and truly dead
      */
     protected boolean isDead() {
-	if (terminated || getProcessStatus(pid) == null) {
-	    terminated = true;
-	}
-	return terminated;
+        if (terminated || getProcessStatus(pid) == null) {
+            terminated = true;
+        }
+        return terminated;
     }
 
     protected boolean isProcessDead(int thePid) {
-	String line = getProcessStatus(thePid);
+        String line = getProcessStatus(thePid);
 
-	if (line == null) {
-	    return true;
-	}
+        if (line == null) {
+            return true;
+        }
 
-	return false;
+        return false;
     }
 
     protected void kill() {
-	if (pid == -1) {
-	    return;
-	}
-	ProcessBuilder kill = new ProcessBuilder();
-	kill.command(new String[] { "kill", String.valueOf(pid) });
-	kill.redirectErrorStream(true);
-	Process killProc;
-	try {
-	    killProc = kill.start();
-	} catch (IOException e) {
-	    throw new IllegalStateException("Unable to start kill pid=" + pid,
-		    e);
-	}
+        if (pid == null) {
+            return;
+        }
+        ProcessBuilder kill = new ProcessBuilder();
+        kill.command(new String[] { "kill", String.valueOf(pid) });
+        kill.redirectErrorStream(true);
+        Process killProc;
+        try {
+            killProc = kill.start();
+        } catch (IOException e) {
+            throw new IllegalStateException("Unable to start kill pid=" + pid,
+                                            e);
+        }
 
-	try {
-	    killProc.waitFor();
-	} catch (InterruptedException e) {
-	    return;
-	}
+        try {
+            killProc.waitFor();
+        } catch (InterruptedException e) {
+            return;
+        }
     }
 
     protected void kill(int signal) {
-	if (pid == -1) {
-	    return;
-	}
-	ProcessBuilder kill = new ProcessBuilder();
-	kill.command(new String[] { "kill", "-" + signal, String.valueOf(pid) });
-	kill.redirectErrorStream(true);
-	Process killProc;
-	try {
-	    killProc = kill.start();
-	} catch (IOException e) {
-	    throw new IllegalStateException("Unable to start kill -" + signal
-		    + " -p" + pid, e);
-	}
+        if (pid == null) {
+            return;
+        }
+        ProcessBuilder kill = new ProcessBuilder();
+        kill.command(new String[] { "kill", "-" + signal, String.valueOf(pid) });
+        kill.redirectErrorStream(true);
+        Process killProc;
+        try {
+            killProc = kill.start();
+        } catch (IOException e) {
+            throw new IllegalStateException("Unable to start kill -" + signal
+                                            + " -p" + pid, e);
+        }
 
-	try {
-	    killProc.waitFor();
-	} catch (InterruptedException e) {
-	    return;
-	}
+        try {
+            killProc.waitFor();
+        } catch (InterruptedException e) {
+            return;
+        }
     }
 
     /**
@@ -352,72 +358,74 @@ public class UnixProcess extends AbstractManagedProcess {
      * @param line
      */
     private void logStatusErrorOutput(BufferedReader reader, String line) {
-	if (log.isLoggable(Level.FINE)) {
-	    StringBuffer out = new StringBuffer(60);
-	    String errLine = line;
-	    while (errLine != null) {
-		out.append(errLine);
-		out.append("\n");
-		try {
-		    errLine = reader.readLine();
-		} catch (IOException e) {
-		    out.append("*** Unable to retrieve further output: "
-			    + e.getMessage());
-		    break;
-		}
-	    }
-	    log.fine("ps error output: \n" + out.toString());
-	}
+        if (log.isLoggable(Level.FINE)) {
+            StringBuffer out = new StringBuffer(60);
+            String errLine = line;
+            while (errLine != null) {
+                out.append(errLine);
+                out.append("\n");
+                try {
+                    errLine = reader.readLine();
+                } catch (IOException e) {
+                    out.append("*** Unable to retrieve further output: "
+                               + e.getMessage());
+                    break;
+                }
+            }
+            log.fine("ps error output: \n" + out.toString());
+        }
     }
 
     protected int readPid(File pidFile) {
-	for (int i = 0; i < 1000; i++) {
-	    if (pidFile.exists() && pidFile.length() > 0) {
-		break;
-	    }
-	    try {
-		Thread.sleep(10);
-	    } catch (InterruptedException e) {
-		return -1;
-	    }
-	}
-	if (!pidFile.exists()) {
-	    throw new IllegalStateException("Required PID file is missing! <"
-		    + pidFile + ">");
-	}
-	try {
-	    BufferedReader pidStream = new BufferedReader(
-		    new InputStreamReader(new FileInputStream(pidFile)));
-	    String pidNum = pidStream.readLine();
-	    if (pidNum == null) {
-		try {
-		    pidStream.close();
-		} catch (IOException e) {
-		    log.fine(String.format("error closing stream", e));
-		}
-		throw new IllegalStateException("pid is empty <" + pidFile
-			+ ">");
-	    }
-	    int thePid = Integer.parseInt(pidNum);
-	    pidStream.close();
-	    return thePid;
-	} catch (IOException e) {
-	    throw new IllegalStateException("Unable to read PID file <"
-		    + pidFile + ">");
-	}
+        for (int i = 0; i < 1000; i++) {
+            if (pidFile.exists() && pidFile.length() > 0) {
+                break;
+            }
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException e) {
+                return -1;
+            }
+        }
+        if (!pidFile.exists()) {
+            throw new IllegalStateException("Required PID file is missing! <"
+                                            + pidFile + ">");
+        }
+        try {
+            BufferedReader pidStream = new BufferedReader(
+                                                          new InputStreamReader(
+                                                                                new FileInputStream(
+                                                                                                    pidFile)));
+            String pidNum = pidStream.readLine();
+            if (pidNum == null) {
+                try {
+                    pidStream.close();
+                } catch (IOException e) {
+                    log.fine(String.format("error closing stream", e));
+                }
+                throw new IllegalStateException("pid is empty <" + pidFile
+                                                + ">");
+            }
+            int thePid = Integer.parseInt(pidNum);
+            pidStream.close();
+            return thePid;
+        } catch (IOException e) {
+            throw new IllegalStateException("Unable to read PID file <"
+                                            + pidFile + ">");
+        }
     }
 
     @Override
     public synchronized void start() throws IOException {
-	if (isActive()) {
-	    return;
-	}
-	super.start();
-	wrapperPid = readPid(getWrapperPidFile());
-	pid = readPid(getPidFile());
-	if (log.isLoggable(Level.FINE)) {
-	    log.fine("started [" + id + "] pid=" + pid);
-	}
+        if (isActive()) {
+            return;
+        }
+        super.start();
+        wrapperPid = readPid(getWrapperPidFile());
+        pid = readPid(getPidFile());
+        if (log.isLoggable(Level.FINE)) {
+            log.fine("started [" + id + "] pid=" + pid);
+        }
     }
 
     /*
@@ -427,58 +435,58 @@ public class UnixProcess extends AbstractManagedProcess {
      */
     @Override
     public synchronized void stop(int waitForSeconds)
-	    throws CannotStopProcessException {
-	if (isDead()) {
-	    return;
-	}
-	if (log.isLoggable(Level.FINE)) {
-	    log.fine("stopping: " + this);
-	}
+                                                     throws CannotStopProcessException {
+        if (isDead()) {
+            return;
+        }
+        if (log.isLoggable(Level.FINE)) {
+            log.fine("stopping: " + this);
+        }
 
-	// Be nice about it.
-	kill();
+        // Be nice about it.
+        kill();
 
-	long target = System.currentTimeMillis() + waitForSeconds * 1000;
-	while (System.currentTimeMillis() < target && !isDead()) {
-	    try {
-		Thread.sleep(100);
-	    } catch (InterruptedException e) {
-		return;
-	    }
-	}
+        long target = System.currentTimeMillis() + waitForSeconds * 1000;
+        while (System.currentTimeMillis() < target && !isDead()) {
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                return;
+            }
+        }
 
-	if (!isDead()) {
-	    log.info("Cannot kill:   PID=" + pid + " " + command
-		    + " resorting to kill -9");
-	    // Okay, then. Terminate with extreme prejudice
-	    kill(9);
-	}
+        if (!isDead()) {
+            log.info("Cannot kill:   PID=" + pid + " " + command
+                     + " resorting to kill -9");
+            // Okay, then. Terminate with extreme prejudice
+            kill(9);
+        }
 
-	if (!isDead()) {
-	    throw new CannotStopProcessException("Cannot stop process.  PID="
-		    + pid + " " + command);
-	}
+        if (!isDead()) {
+            throw new CannotStopProcessException("Cannot stop process.  PID="
+                                                 + pid + " " + command);
+        }
 
     }
 
     @Override
     public int waitFor() throws InterruptedException {
-	if (terminated) {
-	    return getExitValue();
-	}
-	waitFor(wrapperPid);
-	return getExitValue();
+        if (terminated) {
+            return getExitValue();
+        }
+        waitFor(wrapperPid);
+        return getExitValue();
     }
 
     protected void waitFor(int thePid) throws InterruptedException {
-	while (isActive(thePid)) {
-	    Thread.sleep(10);
-	}
-	for (int i = 0; i < 10; i++) {
-	    if (!getExitValueFile().exists()) {
-		Thread.sleep(10);
-	    }
-	}
+        while (isActive(thePid)) {
+            Thread.sleep(10);
+        }
+        for (int i = 0; i < 10; i++) {
+            if (!getExitValueFile().exists()) {
+                Thread.sleep(10);
+            }
+        }
     }
 
     /**
@@ -495,38 +503,40 @@ public class UnixProcess extends AbstractManagedProcess {
      * 
      */
     protected void writeScript() throws IOException {
-	PrintWriter script = new PrintWriter(new OutputStreamWriter(
-		new FileOutputStream(getScriptFile())));
+        PrintWriter script = new PrintWriter(
+                                             new OutputStreamWriter(
+                                                                    new FileOutputStream(
+                                                                                         getScriptFile())));
 
-	script.println("#!/bin/sh");
+        script.println("#!/bin/sh");
 
-	script.append("exec 1> ");
-	script.append(getStdOutFileName());
-	script.println();
+        script.append("exec 1> ");
+        script.append(getStdOutFileName());
+        script.println();
 
-	script.append("exec 2> ");
-	script.append(getStdErrFileName());
-	script.println();
+        script.append("exec 2> ");
+        script.append(getStdErrFileName());
+        script.println();
 
-	script.append('(');
-	script.append("nohup ");
-	for (String part : command) {
-	    script.append('"').append(part).append('"');
-	    script.append(' ');
-	}
-	script.append(" < ");
-	script.append(getStdInFileName());
-	script.append(" & x=$!; echo $x > ");
-	script.append(getPidFileName());
-	script.append("; wait $x; echo $? > ");
-	script.append(getExitValueFileName());
-	script.println(")&");
+        script.append('(');
+        script.append("nohup ");
+        for (String part : command) {
+            script.append('"').append(part).append('"');
+            script.append(' ');
+        }
+        script.append(" < ");
+        script.append(getStdInFileName());
+        script.append(" & x=$!; echo $x > ");
+        script.append(getPidFileName());
+        script.append("; wait $x; echo $? > ");
+        script.append(getExitValueFileName());
+        script.println(")&");
 
-	script.append("echo $! > ");
-	script.println(getWrapperPidFileName());
+        script.append("echo $! > ");
+        script.println(getWrapperPidFileName());
 
-	script.flush();
-	script.close();
+        script.flush();
+        script.close();
     }
 
 }
