@@ -99,7 +99,10 @@ public class UnixProcess extends AbstractManagedProcess {
         try {
             is = new FileInputStream(exitValueFile);
         } catch (FileNotFoundException e1) {
-            throw new IllegalThreadStateException("Process has not terminated");
+            if (log.isLoggable(Level.FINE)) {
+                log.fine("Process has not terminated");
+            }
+            return null;
         }
         BufferedReader reader = new BufferedReader(new InputStreamReader(is));
         String line = null;
