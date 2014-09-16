@@ -45,6 +45,9 @@ import com.sun.jmx.remote.internal.RMIExporter;
  */
 @SuppressWarnings("restriction")
 public class HelloWorld implements RMIExporter {
+
+    public static final String STARTUP_MSG = "HelloWorld startup successful";
+
     static void bindJmx() throws Exception {
         JMXConnectorServer server;
         // Ensure cryptographically strong random number generater used
@@ -64,6 +67,9 @@ public class HelloWorld implements RMIExporter {
     }
 
     public static void main(String[] argv) throws Exception {
+
+        System.out.println(STARTUP_MSG);
+
         if (argv[0].equals("-echo")) {
             for (int i = 1; i < argv.length; i++) {
                 System.out.println(argv[i]);
@@ -84,8 +90,8 @@ public class HelloWorld implements RMIExporter {
                                                                              System.in));
             String line = null;
             int i = 0;
-            while (line == null && i++ < 10) {
-                Thread.sleep(10);
+            while (line == null && i++ < 100) {
+                Thread.sleep(100);
                 line = reader.readLine();
             }
             if (line == null) {

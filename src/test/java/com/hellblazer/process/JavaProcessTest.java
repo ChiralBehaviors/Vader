@@ -16,20 +16,13 @@
  */
 package com.hellblazer.process;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.ConnectException;
 import java.net.URL;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.TimeUnit;
 import java.util.jar.Attributes;
 import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
@@ -40,6 +33,7 @@ import javax.management.ObjectName;
 
 import org.apache.commons.io.input.Tailer;
 import org.apache.commons.io.input.TailerListener;
+import org.apache.commons.io.input.TailerListenerAdapter;
 
 import com.hellblazer.process.impl.JavaProcessImpl;
 import com.hellblazer.process.impl.ManagedProcessFactoryImpl;
@@ -110,54 +104,57 @@ public class JavaProcessTest extends ProcessTest {
         testDir = new File(TEST_DIR);
     }
 
+    private void launchProcess(JavaProcess process) throws IOException {
+        process.setDirectory(testDir);
+        process.setJavaExecutable(javaBin);
+
+        setupJavaClasspath(process);
+        process.start();
+        assertTrue("Expected successful process start",
+                new ProcessStartWatcher(process).waitForSuccessfulStartup());
+
+        // Give the process a chance to do its thing before launching into
+        // evaluating output
+        try {
+            System.out.println("Waiting for process before evaluating output...");
+            TimeUnit.SECONDS.sleep(1);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void validateExpectedEchoLines(BufferedReader reader) throws IOException {
+        String line;
+        line = reader.readLine();
+        assertEquals("foo", line);
+        line = reader.readLine();
+        assertEquals("bar", line);
+        line = reader.readLine();
+        assertEquals("baz", line);
+        line = reader.readLine();
+        assertNull(line);
+    }
+
     public void testClassExecution() throws Exception {
         copyTestClassFile();
         JavaProcess process = new JavaProcessImpl(processFactory.create());
-        process.setArguments(new String[] { "-echo", "foo", "bar", "baz" });
+        process.setArguments(new String[]{"-echo", "foo", "bar", "baz"});
         process.setJavaClass(HelloWorld.class.getCanonicalName());
         assertNull("No jar file set", process.getJarFile());
-        process.setDirectory(testDir);
-        process.setJavaExecutable(javaBin);
-        process.start();
+
+        launchProcess(process);
+
         assertEquals("Process exited normally", 0, process.waitFor());
         assertTrue("Process not active", !process.isActive());
-        BufferedReader reader = new BufferedReader(
-                                                   new InputStreamReader(
-                                                                         process.getStdOut()));
 
-        String line;
-
-        try {
-            line = reader.readLine();
-
-            assertEquals("foo", line);
-            line = reader.readLine();
-            assertEquals("bar", line);
-            line = reader.readLine();
-            assertEquals("baz", line);
-            line = reader.readLine();
-
-            assertNull(line);
-        } finally {
-            reader.close();
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getStdErr()))) {
+            validateExpectedEchoLines(reader);
         }
 
-        try {
-            reader = new BufferedReader(
-                                        new InputStreamReader(
-                                                              process.getStdErr()));
-            line = reader.readLine();
-            assertEquals("foo", line);
-            line = reader.readLine();
-            assertEquals("bar", line);
-            line = reader.readLine();
-            assertEquals("baz", line);
-            line = reader.readLine();
-            assertNull(line);
-        } finally {
-            reader.close();
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getStdOut()))) {
+            assertEquals(HelloWorld.STARTUP_MSG, reader.readLine());
+            validateExpectedEchoLines(reader);
         }
-
     }
 
     public void testExitValue() throws Exception {
@@ -167,7 +164,9 @@ public class JavaProcessTest extends ProcessTest {
         process.setJavaClass(HelloWorld.class.getCanonicalName());
         process.setDirectory(testDir);
         process.setJavaExecutable(javaBin);
-        process.start();
+
+        launchProcess(process);
+
         assertEquals("Process exited abnormally", 66, process.waitFor());
         assertTrue("Process not active", !process.isActive());
     }
@@ -175,46 +174,14 @@ public class JavaProcessTest extends ProcessTest {
     public void testJarExecution() throws Exception {
         copyTestJarFile();
         JavaProcess process = new JavaProcessImpl(processFactory.create());
-        process.setArguments(new String[] { "-echo", "foo", "bar", "baz" });
+        process.setArguments(new String[]{"-echo", "hello"});
         process.setJarFile(new File(testDir, TEST_JAR));
         assertNull("No java class set", process.getJavaClass());
-        process.setDirectory(testDir);
-        process.setJavaExecutable(javaBin);
-        process.start();
+
+        launchProcess(process);
+
         assertEquals("Process exited normally", 0, process.waitFor());
         assertTrue("Process not active", !process.isActive());
-        BufferedReader reader = new BufferedReader(
-                                                   new InputStreamReader(
-                                                                         process.getStdOut()));
-        String line;
-
-        try {
-            line = reader.readLine();
-
-            assertEquals("foo", line);
-            line = reader.readLine();
-            assertEquals("bar", line);
-            line = reader.readLine();
-            assertEquals("baz", line);
-            line = reader.readLine();
-            assertNull(line);
-        } finally {
-            reader.close();
-        }
-
-        reader = new BufferedReader(new InputStreamReader(process.getStdErr()));
-        try {
-            line = reader.readLine();
-            assertEquals("foo", line);
-            line = reader.readLine();
-            assertEquals("bar", line);
-            line = reader.readLine();
-            assertEquals("baz", line);
-            line = reader.readLine();
-            assertNull(line);
-        } finally {
-            reader.close();
-        }
     }
 
     public void testLocalMBeanServerConnection() throws Exception {
@@ -225,10 +192,8 @@ public class JavaProcessTest extends ProcessTest {
         process.setJavaClass(HelloWorld.class.getCanonicalName());
         process.setDirectory(testDir);
         process.setJavaExecutable(javaBin);
-        process.start();
 
-        assertTrue("process is active", process.isActive());
-        // Thread.sleep(3000);
+        launchProcess(process);
 
         Condition condition = new Condition() {
             @Override
@@ -263,65 +228,15 @@ public class JavaProcessTest extends ProcessTest {
         assertTrue("Process not active", !process.isActive());
     }
 
-    public void testStdIn() throws Exception {
-        copyTestClassFile();
-        JavaProcess process = new JavaProcessImpl(processFactory.create());
-        String testLine = "hello";
-        process.setArguments(new String[] { "-readln", testLine });
-        process.setJavaClass(HelloWorld.class.getCanonicalName());
-        process.setDirectory(testDir);
-        process.setJavaExecutable(javaBin);
-        process.start();
-        PrintWriter writer = new PrintWriter(
-                                             new OutputStreamWriter(
-                                                                    process.getStdIn()));
-        try {
-            writer.println(testLine);
-            writer.flush();
-        } finally {
-            writer.close();
-        }
-
-        assertEquals("Process exited normally", 0, process.waitFor());
-        assertTrue("Process not active", !process.isActive());
-        BufferedReader reader = new BufferedReader(
-                                                   new InputStreamReader(
-                                                                         process.getStdOut()));
-        try {
-            String line = reader.readLine();
-            assertEquals(testLine, line);
-        } finally {
-            reader.close();
-        }
-    }
-
-    public void testTailStdOut() throws Exception {
+    public void testTailStdInputOutputStreams() throws Exception {
         final List<String> lines = new CopyOnWriteArrayList<>();
-        final AtomicReference<Tailer> t = new AtomicReference<>();
-        TailerListener listener = new TailerListener() {
-
-            @Override
-            public void init(Tailer tailer) {
-                t.set(tailer);
-            }
-
-            @Override
-            public void handle(Exception ex) {
-            }
-
+        TailerListener listener = new TailerListenerAdapter() {
             @Override
             public void handle(String line) {
                 lines.add(line);
             }
-
-            @Override
-            public void fileRotated() {
-            }
-
-            @Override
-            public void fileNotFound() {
-            }
         };
+
         copyTestClassFile();
         JavaProcess process = new JavaProcessImpl(processFactory.create());
         String testLine = "hello";
@@ -329,34 +244,35 @@ public class JavaProcessTest extends ProcessTest {
         process.setJavaClass(HelloWorld.class.getCanonicalName());
         process.setDirectory(testDir);
         process.setJavaExecutable(javaBin);
-        process.start();
-        process.tailStdOut(listener);
-        assertNotNull(t.get());
-        Thread tailerThread = new Thread(t.get());
-        tailerThread.setDaemon(true);
-        tailerThread.start();
-        PrintWriter writer = new PrintWriter(
-                                             new OutputStreamWriter(
-                                                                    process.getStdIn()));
+
+        launchProcess(process);
+
+        Tailer tailer = null;
         try {
-            writer.println(testLine);
-            writer.flush();
-        } finally {
-            writer.close();
-        }
+            tailer = process.tailStdOut(listener);
 
-        assertEquals("Process exited normally", 0, process.waitFor());
-        assertTrue("Process not active", !process.isActive());
-        Utils.waitForCondition(1000, new Condition() {
-            @Override
-            public boolean isTrue() {
-                return lines.size() > 0;
+            try (PrintWriter writer = new PrintWriter(new OutputStreamWriter(process.getStdIn()))) {
+                writer.println(testLine);
+                writer.flush();
             }
-        });
-        assertEquals(2, lines.size());
-        assertEquals(testLine, lines.get(0));
-        assertEquals(testLine, lines.get(1));
 
-        t.get().stop();
+            assertEquals("Process exited normally", 0, process.waitFor());
+            assertTrue("Process not active", !process.isActive());
+            Utils.waitForCondition(1000, new Condition() {
+                @Override
+                public boolean isTrue() {
+                    return lines.size() > 1;
+                }
+            });
+
+            assertEquals(2, lines.size());
+            assertEquals(testLine, lines.get(1));
+
+            tailer.stop();
+        } finally {
+            if (tailer != null) {
+                tailer.stop();
+            }
+        }
     }
 }
