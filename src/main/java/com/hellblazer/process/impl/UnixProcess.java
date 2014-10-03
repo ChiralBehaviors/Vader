@@ -158,8 +158,8 @@ public class UnixProcess extends AbstractManagedProcess {
     /**
      * @return
      */
-    protected String getProcessStatus(int thePid) {
-        if (thePid == -1) {
+    protected String getProcessStatus(Integer thePid) {
+        if ((thePid == null) || (thePid == -1)) {
             return null;
         }
         ProcessBuilder ps = new ProcessBuilder();

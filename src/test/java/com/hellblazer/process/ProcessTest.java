@@ -17,6 +17,8 @@
 package com.hellblazer.process;
 
 import java.io.File;
+import java.util.HashMap;
+import java.util.Map;
 
 import junit.framework.TestCase;
 
@@ -41,5 +43,17 @@ abstract public class ProcessTest extends TestCase {
         String os = System.getProperty("os.name").toLowerCase();
         return new File(os.indexOf("win") >= 0 ? javaBin + "java.exe"
                                               : javaBin + "java");
+    }
+
+    protected void setupJavaClasspath(JavaProcess process) {
+
+        // Force the Java classpath to be local directory. Otherwise,
+        // in certain environments we might inherit an existing classpath, which
+        // breaks the test. For example, this might happen when running the test
+        // within an IDE or CI server.
+
+        Map<String,String> env = new HashMap<>();
+        env.put("CLASSPATH", "./");
+        process.setEnvironment(env);
     }
 }
