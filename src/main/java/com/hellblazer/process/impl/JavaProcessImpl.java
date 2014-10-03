@@ -385,6 +385,16 @@ public class JavaProcessImpl implements JavaProcess, Cloneable {
         return process.getStdOut();
     }
 
+    @Override
+    public String getStdOutTail(int numLines) {
+        return process.getStdOutTail(numLines);
+    }
+
+    @Override
+    public String getStdErrTail(int numLines) {
+        return process.getStdErrTail(numLines);
+    }
+
     /**
      * @return the List of arguments to the Java virtual machine
      */

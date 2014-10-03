@@ -16,27 +16,20 @@
  */
 package com.hellblazer.process.impl;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.FilenameFilter;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.apache.commons.io.input.Tailer;
 import org.apache.commons.io.input.TailerListener;
 
+import com.hellblazer.process.CachedFileTailer;
 import com.hellblazer.process.CannotStopProcessException;
 import com.hellblazer.process.ManagedProcess;
 
@@ -126,6 +119,10 @@ abstract public class AbstractManagedProcess implements ManagedProcess,
 
     protected final UUID          id;
     protected volatile boolean    terminated = false;
+
+    protected CachedFileTailer stdOutCachedFileTailer;
+    protected CachedFileTailer stdErrCachedFileTailer;
+    public static final int MAX_TAIL_BUFFER_LINES = 4000;
 
     public AbstractManagedProcess() {
         this(UUID.randomUUID());
@@ -341,6 +338,7 @@ abstract public class AbstractManagedProcess implements ManagedProcess,
 
     @Override
     public synchronized void start() throws IOException {
+
         if (isActive()) {
             return;
         }
@@ -385,6 +383,10 @@ abstract public class AbstractManagedProcess implements ManagedProcess,
                 return;
             }
         }
+
+        this.stdOutCachedFileTailer = new CachedFileTailer(getStdOutFile(), TimeUnit.SECONDS, 3, MAX_TAIL_BUFFER_LINES);
+        this.stdErrCachedFileTailer = new CachedFileTailer(getStdErrFile(), TimeUnit.SECONDS, 3, MAX_TAIL_BUFFER_LINES);
+
     }
 
     @Override
@@ -426,6 +428,41 @@ abstract public class AbstractManagedProcess implements ManagedProcess,
                              boolean end, boolean reOpen, int bufSize) {
         return Tailer.create(getStdOutFile(), listener, delayMillis, end,
                              reOpen, bufSize);
+    }
+
+    @Override
+    public String getStdOutTail(int numLines) {
+        if (!getStdOutFile().exists()) {
+            throw new IllegalThreadStateException(
+                    "Process has not been started or has already exited");
+        }
+        return readLogLinesBuffer(numLines, this.stdOutCachedFileTailer);
+    }
+
+    @Override
+    public String getStdErrTail(int numLines) {
+        if (!getStdErrFile().exists()) {
+            throw new IllegalThreadStateException(
+                    "Process has not been started or has already exited");
+        }
+        return readLogLinesBuffer(numLines, this.stdErrCachedFileTailer);
+    }
+
+    private String readLogLinesBuffer(int numLines, CachedFileTailer cachedFileTailer) {
+        try {
+            List<String> logLines = cachedFileTailer.getTailLines(numLines);
+            StringBuilder sb = new StringBuilder();
+            for (String logLine : logLines) {
+                sb.append(logLine).append("\n");
+            }
+            return sb.toString();
+
+        } catch (IOException e) {
+            if (log.isLoggable(Level.WARNING)) {
+                log.log(Level.WARNING, "Unable to read log lines", e);
+            }
+            return null;
+        }
     }
 
     @Override

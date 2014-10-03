@@ -223,6 +223,22 @@ public interface ManagedProcess extends Serializable {
     Tailer tailStdOut(TailerListener listener);
 
     /**
+     * Retrieve the tail of the Stdout stream on demand.
+     *
+     * @param numLines The number of lines to retrieve from the tail of the StdOut stream. Max = 4000
+     * @return numLines worth of output from the tail of the StdOut stream.
+     */
+    String getStdOutTail(int numLines);
+
+    /**
+     * Retrieve the tail of the Stderr stream on demand.
+     *
+     * @param numLines The number of lines to retrieve from the tail of the StdErr stream. Max = 4000
+     * @return numLines worth of output from the tail of the StdErr stream.
+     */
+    String getStdErrTail(int numLines);
+
+    /**
      * causes the current thread to wait, if necessary, until the process
      * represented by this <code>Process</code> object has terminated. This
      * method returns immediately if the subprocess has already terminated. If

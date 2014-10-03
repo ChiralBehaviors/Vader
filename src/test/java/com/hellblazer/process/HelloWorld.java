@@ -75,6 +75,12 @@ public class HelloWorld implements RMIExporter {
                 System.out.println(argv[i]);
                 System.err.println(argv[i]);
             }
+        } else if (argv[0].equals("-loglines")) {
+            for (int i = 0; i < 5000; i++) {
+                String msg = String.format("Line #%d", i);
+                System.out.println(msg);
+                System.err.println(msg);
+            }
         } else if (argv[0].equals("-jmx")) {
             bindJmx();
             Thread.sleep(Integer.parseInt(argv[1]));

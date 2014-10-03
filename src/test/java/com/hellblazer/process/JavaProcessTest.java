@@ -142,18 +142,24 @@ public class JavaProcessTest extends ProcessTest {
         process.setJavaClass(HelloWorld.class.getCanonicalName());
         assertNull("No jar file set", process.getJarFile());
 
-        launchProcess(process);
+        try {
+            launchProcess(process);
 
-        assertEquals("Process exited normally", 0, process.waitFor());
-        assertTrue("Process not active", !process.isActive());
+            assertEquals("Process exited normally", 0, process.waitFor());
+            assertTrue("Process not active", !process.isActive());
 
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getStdErr()))) {
-            validateExpectedEchoLines(reader);
-        }
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getStdErr()))) {
+                validateExpectedEchoLines(reader);
+            }
 
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getStdOut()))) {
-            assertEquals(HelloWorld.STARTUP_MSG, reader.readLine());
-            validateExpectedEchoLines(reader);
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getStdOut()))) {
+                assertEquals(HelloWorld.STARTUP_MSG, reader.readLine());
+                validateExpectedEchoLines(reader);
+            }
+        } finally {
+            if (process != null) {
+                process.destroy();
+            }
         }
     }
 
@@ -165,10 +171,15 @@ public class JavaProcessTest extends ProcessTest {
         process.setDirectory(testDir);
         process.setJavaExecutable(javaBin);
 
-        launchProcess(process);
-
-        assertEquals("Process exited abnormally", 66, process.waitFor());
-        assertTrue("Process not active", !process.isActive());
+        try {
+            launchProcess(process);
+            assertEquals("Process exited abnormally", 66, process.waitFor());
+            assertTrue("Process not active", !process.isActive());
+        } finally {
+            if (process != null) {
+                process.destroy();
+            }
+        }
     }
 
     public void testJarExecution() throws Exception {
@@ -178,10 +189,15 @@ public class JavaProcessTest extends ProcessTest {
         process.setJarFile(new File(testDir, TEST_JAR));
         assertNull("No java class set", process.getJavaClass());
 
-        launchProcess(process);
-
-        assertEquals("Process exited normally", 0, process.waitFor());
-        assertTrue("Process not active", !process.isActive());
+        try {
+            launchProcess(process);
+            assertEquals("Process exited normally", 0, process.waitFor());
+            assertTrue("Process not active", !process.isActive());
+        } finally {
+            if (process != null) {
+                process.destroy();
+            }
+        }
     }
 
     public void testLocalMBeanServerConnection() throws Exception {
@@ -193,39 +209,83 @@ public class JavaProcessTest extends ProcessTest {
         process.setDirectory(testDir);
         process.setJavaExecutable(javaBin);
 
-        launchProcess(process);
-
-        Condition condition = new Condition() {
-            @Override
-            public boolean isTrue() {
-                try {
-                    connection = process.getLocalMBeanServerConnection();
-                    return true;
-                } catch (ConnectException e) {
-                    return false;
-                } catch (NoLocalJmxConnectionException e) {
-                    return false;
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    System.out.flush();
-                    System.err.flush();
-                    System.out.println("error");
-                    fail("error retrieving JMX connection: " + e);
-                    return false;
-                }
-            }
-
-        };
         try {
+            launchProcess(process);
+
+            Condition condition = new Condition() {
+                @Override
+                public boolean isTrue() {
+                    try {
+                        connection = process.getLocalMBeanServerConnection();
+                        return true;
+                    } catch (ConnectException e) {
+                        return false;
+                    } catch (NoLocalJmxConnectionException e) {
+                        return false;
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        System.out.flush();
+                        System.err.flush();
+                        System.out.println("error");
+                        fail("error retrieving JMX connection: " + e);
+                        return false;
+                    }
+                }
+
+            };
+
             assertTrue("JMX connection established",
                        Utils.waitForCondition(60 * 1000, condition));
 
             Set<ObjectName> names = connection.queryNames(null, null);
             assertTrue(names.size() > 1);
         } finally {
-            process.stop();
+            if (process != null) {
+                process.destroy();
+            }
         }
         assertTrue("Process not active", !process.isActive());
+    }
+
+    public void testOnDemandInputOutputStreams() throws Exception {
+        copyTestClassFile();
+        JavaProcess process = new JavaProcessImpl(processFactory.create());
+        process.setArguments(new String[] { "-loglines" });
+        process.setJavaClass(HelloWorld.class.getCanonicalName());
+        process.setDirectory(testDir);
+        process.setJavaExecutable(javaBin);
+
+        // Try it before launching process
+        try {
+            process.getStdOutTail(200);
+            fail("Expected an illegal thread state exception because the process hasn't started yet");
+        } catch (IllegalThreadStateException e) {
+            System.out.println("Caught expected exception : " + e.getMessage());
+        }
+
+        try {
+            process.getStdErrTail(200);
+            fail("Expected an illegal thread state exception because the process hasn't started yet");
+        } catch (IllegalThreadStateException e) {
+            System.out.println("Caught expected exception : " + e.getMessage());
+        }
+
+        try {
+            launchProcess(process);
+
+            String stdout = process.getStdOutTail(200).trim();
+            assertTrue(stdout.startsWith("Line #4800"));
+            assertTrue(stdout.endsWith("Line #4999"));
+
+            String stderr = process.getStdErrTail(200).trim();
+            assertTrue(stderr.startsWith("Line #4800"));
+            assertTrue(stderr.endsWith("Line #4999"));
+
+        } finally {
+            if (process != null) {
+                process.destroy();
+            }
+        }
     }
 
     public void testTailStdInputOutputStreams() throws Exception {
@@ -245,10 +305,9 @@ public class JavaProcessTest extends ProcessTest {
         process.setDirectory(testDir);
         process.setJavaExecutable(javaBin);
 
-        launchProcess(process);
-
         Tailer tailer = null;
         try {
+            launchProcess(process);
             tailer = process.tailStdOut(listener);
 
             try (PrintWriter writer = new PrintWriter(new OutputStreamWriter(process.getStdIn()))) {
@@ -273,6 +332,8 @@ public class JavaProcessTest extends ProcessTest {
             if (tailer != null) {
                 tailer.stop();
             }
+
+            process.destroy();
         }
     }
 }
