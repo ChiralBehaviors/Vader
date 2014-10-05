@@ -1,18 +1,16 @@
-/** 
- * (C) Copyright 2011 Hal Hildebrand, all rights reserved.
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
+/** (C) Copyright 2011-2014 Chiral Behaviors, All Rights Reserved
  * 
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  * 
- * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *     
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, 
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
+ * See the License for the specific language governing permissions and 
+ * limitations under the License.
  */
 package com.hellblazer.process.impl;
 
@@ -69,22 +67,6 @@ public class UnixProcess extends AbstractManagedProcess {
     }
 
     @Override
-    protected void execute() throws IOException {
-        writeScript();
-        List<String> scriptCmnds = new ArrayList<String>();
-        scriptCmnds.add("/bin/sh");
-        scriptCmnds.add(getScriptFile().getAbsolutePath());
-        primitiveExecute(scriptCmnds);
-    }
-
-    /**
-     * @return the array of strings which represent active process state
-     */
-    protected String[] getActiveStates() {
-        return activeStates;
-    }
-
-    @Override
     public Integer getExitValue() {
         if (pid == null || terminated) {
             return exitValue;
@@ -134,17 +116,161 @@ public class UnixProcess extends AbstractManagedProcess {
         return exitValue;
     }
 
+    @Override
+    public Integer getPid() {
+        return pid;
+    }
+
+    @Override
+    public boolean isActive() {
+        return isActive(pid);
+    }
+
+    public boolean isActive(Integer thePid) {
+        if (thePid == null) {
+            if (log.isLoggable(Level.FINE)) {
+                log.fine("inactive for " + this);
+            }
+            return false;
+        }
+        String status = getProcessStatus(thePid);
+        if (status == null) {
+            if (log.isLoggable(Level.FINE)) {
+                log.fine("inactive, no status for " + this);
+            }
+            return false;
+        }
+        for (String active : getActiveStates()) {
+            if (status.startsWith(active)) {
+                return true;
+            }
+        }
+        if (log.isLoggable(Level.FINE)) {
+            log.fine("inactive, status is " + status + " for " + this);
+        }
+        return false;
+    }
+
+    @Override
+    public synchronized void start() throws IOException {
+        if (isActive()) {
+            return;
+        }
+        super.start();
+        wrapperPid = readPid(getWrapperPidFile());
+        pid = readPid(getPidFile());
+        if (log.isLoggable(Level.FINE)) {
+            log.fine("started [" + id + "] pid=" + pid);
+        }
+    }
+
+    /*
+     * (non-Javadoc)
+     * 
+     * @see com.hellblazer.process.ManagedProcess#stop()
+     */
+    @Override
+    public synchronized void stop(int waitForSeconds)
+                                                     throws CannotStopProcessException {
+        if (isDead()) {
+            return;
+        }
+        if (log.isLoggable(Level.FINE)) {
+            log.fine("stopping: " + this);
+        }
+
+        // Be nice about it.
+        kill();
+
+        long target = System.currentTimeMillis() + waitForSeconds * 1000;
+        while (System.currentTimeMillis() < target && !isDead()) {
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                return;
+            }
+        }
+
+        if (!isDead()) {
+            log.info("Cannot kill:   PID=" + pid + " " + command
+                     + " resorting to kill -9");
+            // Okay, then. Terminate with extreme prejudice
+            kill(9);
+        }
+
+        if (!isDead()) {
+            throw new CannotStopProcessException("Cannot stop process.  PID="
+                                                 + pid + " " + command);
+        }
+
+    }
+
+    @Override
+    public int waitFor() throws InterruptedException {
+        if (terminated) {
+            return getExitValue();
+        }
+        waitFor(wrapperPid);
+        return getExitValue();
+    }
+
+    private boolean invalidStatus(String line) {
+        if (line.startsWith("STAT")) {
+            return true;
+        }
+        for (String state : VALID_STATES) {
+            if (line.startsWith(state)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * @param reader
+     * @param line
+     */
+    private void logStatusErrorOutput(BufferedReader reader, String line) {
+        if (log.isLoggable(Level.FINE)) {
+            StringBuffer out = new StringBuffer(60);
+            String errLine = line;
+            while (errLine != null) {
+                out.append(errLine);
+                out.append("\n");
+                try {
+                    errLine = reader.readLine();
+                } catch (IOException e) {
+                    out.append("*** Unable to retrieve further output: "
+                               + e.getMessage());
+                    break;
+                }
+            }
+            log.fine("ps error output: \n" + out.toString());
+        }
+    }
+
+    @Override
+    protected void execute() throws IOException {
+        writeScript();
+        List<String> scriptCmnds = new ArrayList<String>();
+        scriptCmnds.add("/bin/sh");
+        scriptCmnds.add(getScriptFile().getAbsolutePath());
+        primitiveExecute(scriptCmnds);
+    }
+
+    /**
+     * @return the array of strings which represent active process state
+     */
+    protected String[] getActiveStates() {
+        return activeStates;
+    }
+
     protected File getExitValueFile() {
         return new File(directory, getExitValueFileName());
     }
 
     protected String getExitValueFileName() {
         return inControlDirectory("exit.value");
-    }
-
-    @Override
-    public Integer getPid() {
-        return pid;
     }
 
     protected File getPidFile() {
@@ -234,18 +360,6 @@ public class UnixProcess extends AbstractManagedProcess {
         return line;
     }
 
-    private boolean invalidStatus(String line) {
-        if (line.startsWith("STAT")) {
-            return true;
-        }
-        for (String state : VALID_STATES) {
-            if (line.startsWith(state)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
     protected File getScriptFile() {
         return new File(directory, getScriptFileName());
     }
@@ -260,36 +374,6 @@ public class UnixProcess extends AbstractManagedProcess {
 
     protected String getWrapperPidFileName() {
         return inControlDirectory("wrapper.pid");
-    }
-
-    @Override
-    public boolean isActive() {
-        return isActive(pid);
-    }
-
-    public boolean isActive(Integer thePid) {
-        if (thePid == null) {
-            if (log.isLoggable(Level.FINE)) {
-                log.fine("inactive for " + this);
-            }
-            return false;
-        }
-        String status = getProcessStatus(thePid);
-        if (status == null) {
-            if (log.isLoggable(Level.FINE)) {
-                log.fine("inactive, no status for " + this);
-            }
-            return false;
-        }
-        for (String active : getActiveStates()) {
-            if (status.startsWith(active)) {
-                return true;
-            }
-        }
-        if (log.isLoggable(Level.FINE)) {
-            log.fine("inactive, status is " + status + " for " + this);
-        }
-        return false;
     }
 
     /**
@@ -356,29 +440,6 @@ public class UnixProcess extends AbstractManagedProcess {
         }
     }
 
-    /**
-     * @param reader
-     * @param line
-     */
-    private void logStatusErrorOutput(BufferedReader reader, String line) {
-        if (log.isLoggable(Level.FINE)) {
-            StringBuffer out = new StringBuffer(60);
-            String errLine = line;
-            while (errLine != null) {
-                out.append(errLine);
-                out.append("\n");
-                try {
-                    errLine = reader.readLine();
-                } catch (IOException e) {
-                    out.append("*** Unable to retrieve further output: "
-                               + e.getMessage());
-                    break;
-                }
-            }
-            log.fine("ps error output: \n" + out.toString());
-        }
-    }
-
     protected int readPid(File pidFile) {
         for (int i = 0; i < 1000; i++) {
             if (pidFile.exists() && pidFile.length() > 0) {
@@ -416,69 +477,6 @@ public class UnixProcess extends AbstractManagedProcess {
             throw new IllegalStateException("Unable to read PID file <"
                                             + pidFile + ">");
         }
-    }
-
-    @Override
-    public synchronized void start() throws IOException {
-        if (isActive()) {
-            return;
-        }
-        super.start();
-        wrapperPid = readPid(getWrapperPidFile());
-        pid = readPid(getPidFile());
-        if (log.isLoggable(Level.FINE)) {
-            log.fine("started [" + id + "] pid=" + pid);
-        }
-    }
-
-    /*
-     * (non-Javadoc)
-     * 
-     * @see com.hellblazer.process.ManagedProcess#stop()
-     */
-    @Override
-    public synchronized void stop(int waitForSeconds)
-                                                     throws CannotStopProcessException {
-        if (isDead()) {
-            return;
-        }
-        if (log.isLoggable(Level.FINE)) {
-            log.fine("stopping: " + this);
-        }
-
-        // Be nice about it.
-        kill();
-
-        long target = System.currentTimeMillis() + waitForSeconds * 1000;
-        while (System.currentTimeMillis() < target && !isDead()) {
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-                return;
-            }
-        }
-
-        if (!isDead()) {
-            log.info("Cannot kill:   PID=" + pid + " " + command
-                     + " resorting to kill -9");
-            // Okay, then. Terminate with extreme prejudice
-            kill(9);
-        }
-
-        if (!isDead()) {
-            throw new CannotStopProcessException("Cannot stop process.  PID="
-                                                 + pid + " " + command);
-        }
-
-    }
-
-    @Override
-    public int waitFor() throws InterruptedException {
-        if (terminated) {
-            return getExitValue();
-        }
-        waitFor(wrapperPid);
-        return getExitValue();
     }
 
     protected void waitFor(int thePid) throws InterruptedException {

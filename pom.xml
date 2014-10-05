@@ -10,7 +10,7 @@
 	<repositories>
 		<repository>
 			<id>hellblazer-snapshots</id>
-			<url>http://repository-hal900000.forge.cloudbees.com/snapshot/</url>
+			<url>http://repository-chiralbehaviors.forge.cloudbees.com/snapshot/</url>
 		</repository>
 	</repositories>
 
@@ -66,8 +66,7 @@
 		<dependency>
 			<groupId>com.hellblazer</groupId>
 			<artifactId>utils</artifactId>
-			<version>0.0.3-SNAPSHOT</version>
-			<scope>test</scope>
+			<version>0.0.4-SNAPSHOT</version>
 		</dependency>
 	</dependencies>
 </project>

@@ -1,18 +1,16 @@
-/** 
- * (C) Copyright 2011 Hal Hildebrand, all rights reserved.
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
+/** (C) Copyright 2011-2014 Chiral Behaviors, All Rights Reserved
  * 
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  * 
- * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *     
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, 
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
+ * See the License for the specific language governing permissions and 
+ * limitations under the License.
  */
 package com.hellblazer.process;
 
@@ -47,98 +45,14 @@ import com.hellblazer.utils.Utils;
 public class JavaProcessTest extends ProcessTest {
     protected static final String TEST_DIR       = "test-dirs/java-process-test";
     protected static final String TEST_JAR       = "test.jar";
+    protected File                testDir;
     MBeanServerConnection         connection;
     ManagedProcessFactoryImpl     processFactory = new ManagedProcessFactoryImpl();
-    protected File                testDir;
-
-    protected void copyTestClassFile() throws Exception {
-        String classFileName = HelloWorld.class.getCanonicalName().replace('.',
-                                                                           '/')
-                               + ".class";
-        URL classFile = getClass().getResource("/" + classFileName);
-        assertNotNull(classFile);
-        File copiedFile = new File(testDir, classFileName);
-        assertTrue(copiedFile.getParentFile().mkdirs());
-        FileOutputStream out = new FileOutputStream(copiedFile);
-        InputStream in = classFile.openStream();
-        byte[] buffer = new byte[1024];
-        for (int read = in.read(buffer); read != -1; read = in.read(buffer)) {
-            out.write(buffer, 0, read);
-        }
-        in.close();
-        out.close();
-    }
-
-    protected void copyTestJarFile() throws Exception {
-        String classFileName = HelloWorld.class.getCanonicalName().replace('.',
-                                                                           '/')
-                               + ".class";
-        URL classFile = getClass().getResource("/" + classFileName);
-        assertNotNull(classFile);
-
-        Manifest manifest = new Manifest();
-        Attributes attributes = manifest.getMainAttributes();
-        attributes.putValue("Manifest-Version", "1.0");
-        attributes.putValue("Main-Class", HelloWorld.class.getCanonicalName());
-
-        FileOutputStream fos = new FileOutputStream(new File(testDir, TEST_JAR));
-        JarOutputStream jar = new JarOutputStream(fos, manifest);
-        JarEntry entry = new JarEntry(classFileName);
-        jar.putNextEntry(entry);
-        InputStream in = classFile.openStream();
-        byte[] buffer = new byte[1024];
-        for (int read = in.read(buffer); read != -1; read = in.read(buffer)) {
-            jar.write(buffer, 0, read);
-        }
-        in.close();
-        jar.closeEntry();
-        jar.close();
-    }
-
-    @Override
-    protected void setUp() {
-        System.setProperty("sun.net.client.defaultConnectTimeout", "10000");
-        System.setProperty("sun.net.client.defaultReadTimeout", "10000");
-        System.setProperty("javax.net.debug", "all");
-        Utils.initializeDirectory(TEST_DIR);
-        testDir = new File(TEST_DIR);
-    }
-
-    private void launchProcess(JavaProcess process) throws IOException {
-        process.setDirectory(testDir);
-        process.setJavaExecutable(javaBin);
-
-        setupJavaClasspath(process);
-        process.start();
-        assertTrue("Expected successful process start",
-                new ProcessStartWatcher(process).waitForSuccessfulStartup());
-
-        // Give the process a chance to do its thing before launching into
-        // evaluating output
-        try {
-            System.out.println("Waiting for process before evaluating output...");
-            TimeUnit.SECONDS.sleep(1);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void validateExpectedEchoLines(BufferedReader reader) throws IOException {
-        String line;
-        line = reader.readLine();
-        assertEquals("foo", line);
-        line = reader.readLine();
-        assertEquals("bar", line);
-        line = reader.readLine();
-        assertEquals("baz", line);
-        line = reader.readLine();
-        assertNull(line);
-    }
 
     public void testClassExecution() throws Exception {
         copyTestClassFile();
         JavaProcess process = new JavaProcessImpl(processFactory.create());
-        process.setArguments(new String[]{"-echo", "foo", "bar", "baz"});
+        process.setArguments(new String[] { "-echo", "foo", "bar", "baz" });
         process.setJavaClass(HelloWorld.class.getCanonicalName());
         assertNull("No jar file set", process.getJarFile());
 
@@ -148,11 +62,15 @@ public class JavaProcessTest extends ProcessTest {
             assertEquals("Process exited normally", 0, process.waitFor());
             assertTrue("Process not active", !process.isActive());
 
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getStdErr()))) {
+            try (BufferedReader reader = new BufferedReader(
+                                                            new InputStreamReader(
+                                                                                  process.getStdErr()))) {
                 validateExpectedEchoLines(reader);
             }
 
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getStdOut()))) {
+            try (BufferedReader reader = new BufferedReader(
+                                                            new InputStreamReader(
+                                                                                  process.getStdOut()))) {
                 assertEquals(HelloWorld.STARTUP_MSG, reader.readLine());
                 validateExpectedEchoLines(reader);
             }
@@ -185,7 +103,7 @@ public class JavaProcessTest extends ProcessTest {
     public void testJarExecution() throws Exception {
         copyTestJarFile();
         JavaProcess process = new JavaProcessImpl(processFactory.create());
-        process.setArguments(new String[]{"-echo", "hello"});
+        process.setArguments(new String[] { "-echo", "hello" });
         process.setJarFile(new File(testDir, TEST_JAR));
         assertNull("No java class set", process.getJavaClass());
 
@@ -310,7 +228,9 @@ public class JavaProcessTest extends ProcessTest {
             launchProcess(process);
             tailer = process.tailStdOut(listener);
 
-            try (PrintWriter writer = new PrintWriter(new OutputStreamWriter(process.getStdIn()))) {
+            try (PrintWriter writer = new PrintWriter(
+                                                      new OutputStreamWriter(
+                                                                             process.getStdIn()))) {
                 writer.println(testLine);
                 writer.flush();
             }
@@ -335,5 +255,90 @@ public class JavaProcessTest extends ProcessTest {
 
             process.destroy();
         }
+    }
+
+    private void launchProcess(JavaProcess process) throws IOException {
+        process.setDirectory(testDir);
+        process.setJavaExecutable(javaBin);
+
+        setupJavaClasspath(process);
+        process.start();
+        assertTrue("Expected successful process start",
+                   new ProcessStartWatcher(process).waitForSuccessfulStartup());
+
+        // Give the process a chance to do its thing before launching into
+        // evaluating output
+        try {
+            System.out.println("Waiting for process before evaluating output...");
+            TimeUnit.SECONDS.sleep(1);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void validateExpectedEchoLines(BufferedReader reader)
+                                                                 throws IOException {
+        String line;
+        line = reader.readLine();
+        assertEquals("foo", line);
+        line = reader.readLine();
+        assertEquals("bar", line);
+        line = reader.readLine();
+        assertEquals("baz", line);
+        line = reader.readLine();
+        assertNull(line);
+    }
+
+    protected void copyTestClassFile() throws Exception {
+        String classFileName = HelloWorld.class.getCanonicalName().replace('.',
+                                                                           '/')
+                               + ".class";
+        URL classFile = getClass().getResource("/" + classFileName);
+        assertNotNull(classFile);
+        File copiedFile = new File(testDir, classFileName);
+        assertTrue(copiedFile.getParentFile().mkdirs());
+        FileOutputStream out = new FileOutputStream(copiedFile);
+        InputStream in = classFile.openStream();
+        byte[] buffer = new byte[1024];
+        for (int read = in.read(buffer); read != -1; read = in.read(buffer)) {
+            out.write(buffer, 0, read);
+        }
+        in.close();
+        out.close();
+    }
+
+    protected void copyTestJarFile() throws Exception {
+        String classFileName = HelloWorld.class.getCanonicalName().replace('.',
+                                                                           '/')
+                               + ".class";
+        URL classFile = getClass().getResource("/" + classFileName);
+        assertNotNull(classFile);
+
+        Manifest manifest = new Manifest();
+        Attributes attributes = manifest.getMainAttributes();
+        attributes.putValue("Manifest-Version", "1.0");
+        attributes.putValue("Main-Class", HelloWorld.class.getCanonicalName());
+
+        FileOutputStream fos = new FileOutputStream(new File(testDir, TEST_JAR));
+        JarOutputStream jar = new JarOutputStream(fos, manifest);
+        JarEntry entry = new JarEntry(classFileName);
+        jar.putNextEntry(entry);
+        InputStream in = classFile.openStream();
+        byte[] buffer = new byte[1024];
+        for (int read = in.read(buffer); read != -1; read = in.read(buffer)) {
+            jar.write(buffer, 0, read);
+        }
+        in.close();
+        jar.closeEntry();
+        jar.close();
+    }
+
+    @Override
+    protected void setUp() {
+        System.setProperty("sun.net.client.defaultConnectTimeout", "10000");
+        System.setProperty("sun.net.client.defaultReadTimeout", "10000");
+        System.setProperty("javax.net.debug", "all");
+        Utils.initializeDirectory(TEST_DIR);
+        testDir = new File(TEST_DIR);
     }
 }

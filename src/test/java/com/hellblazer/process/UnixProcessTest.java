@@ -1,18 +1,16 @@
-/** 
- * (C) Copyright 2011 Hal Hildebrand, all rights reserved.
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
+/** (C) Copyright 2011-2014 Chiral Behaviors, All Rights Reserved
  * 
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  * 
- * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *     
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, 
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
+ * See the License for the specific language governing permissions and 
+ * limitations under the License.
  */
 package com.hellblazer.process;
 
@@ -38,30 +36,6 @@ public class UnixProcessTest extends ProcessTest {
 
     protected static final String TEST_DIR = "test-dirs/unix-test";
     File                          testDir;
-
-    protected void copyTestClassFile() throws Exception {
-        String classFileName = HelloWorld.class.getCanonicalName().replace('.',
-                                                                           '/')
-                               + ".class";
-        URL classFile = getClass().getResource("/" + classFileName);
-        assertNotNull(classFile);
-        File copiedFile = new File(testDir, classFileName);
-        assertTrue(copiedFile.getParentFile().mkdirs());
-        FileOutputStream out = new FileOutputStream(copiedFile);
-        InputStream in = classFile.openStream();
-        byte[] buffer = new byte[1024];
-        for (int read = in.read(buffer); read != -1; read = in.read(buffer)) {
-            out.write(buffer, 0, read);
-        }
-        in.close();
-        out.close();
-    }
-
-    @Override
-    protected void setUp() {
-        Utils.initializeDirectory(TEST_DIR);
-        testDir = new File(TEST_DIR);
-    }
 
     public void testAcquire() throws Exception {
         assertNotNull("Java executable exists", ProcessTest.javaBin);
@@ -137,6 +111,30 @@ public class UnixProcessTest extends ProcessTest {
         }
 
         assertEquals("Expected ls result", expected.toString(), rslt.toString());
+    }
+
+    protected void copyTestClassFile() throws Exception {
+        String classFileName = HelloWorld.class.getCanonicalName().replace('.',
+                                                                           '/')
+                               + ".class";
+        URL classFile = getClass().getResource("/" + classFileName);
+        assertNotNull(classFile);
+        File copiedFile = new File(testDir, classFileName);
+        assertTrue(copiedFile.getParentFile().mkdirs());
+        FileOutputStream out = new FileOutputStream(copiedFile);
+        InputStream in = classFile.openStream();
+        byte[] buffer = new byte[1024];
+        for (int read = in.read(buffer); read != -1; read = in.read(buffer)) {
+            out.write(buffer, 0, read);
+        }
+        in.close();
+        out.close();
+    }
+
+    @Override
+    protected void setUp() {
+        Utils.initializeDirectory(TEST_DIR);
+        testDir = new File(TEST_DIR);
     }
 
 }

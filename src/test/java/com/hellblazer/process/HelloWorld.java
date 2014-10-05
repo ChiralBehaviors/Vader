@@ -1,18 +1,16 @@
-/** 
- * (C) Copyright 2011 Hal Hildebrand, all rights reserved.
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
+/** (C) Copyright 2011-2014 Chiral Behaviors, All Rights Reserved
  * 
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  * 
- * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *     
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, 
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
+ * See the License for the specific language governing permissions and 
+ * limitations under the License.
  */
 package com.hellblazer.process;
 
@@ -47,24 +45,6 @@ import com.sun.jmx.remote.internal.RMIExporter;
 public class HelloWorld implements RMIExporter {
 
     public static final String STARTUP_MSG = "HelloWorld startup successful";
-
-    static void bindJmx() throws Exception {
-        JMXConnectorServer server;
-        // Ensure cryptographically strong random number generater used
-        // to choose the object number - see java.rmi.server.ObjID
-        System.setProperty("java.rmi.server.randomIDs", "true");
-        // Ensure that the rmi server socket binds to the localhost, rather than the translated IP address
-        System.setProperty("java.rmi.server.hostname", "127.0.0.1");
-
-        // This RMI server should not keep the VM alive
-        Map<String, RMIExporter> env = new HashMap<String, RMIExporter>();
-        env.put(RMIExporter.EXPORTER_ATTRIBUTE, new HelloWorld());
-        MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
-        JMXServiceURL url = new JMXServiceURL("rmi", "127.0.0.1", 11645);
-        server = JMXConnectorServerFactory.newJMXConnectorServer(url, env, mbs);
-        server.start();
-        ConnectorAddressLink.export(server.getAddress().toString());
-    }
 
     public static void main(String[] argv) throws Exception {
 
@@ -109,6 +89,24 @@ public class HelloWorld implements RMIExporter {
             System.err.println("Unknown option: " + argv[0]);
             System.exit(-1);
         }
+    }
+
+    static void bindJmx() throws Exception {
+        JMXConnectorServer server;
+        // Ensure cryptographically strong random number generater used
+        // to choose the object number - see java.rmi.server.ObjID
+        System.setProperty("java.rmi.server.randomIDs", "true");
+        // Ensure that the rmi server socket binds to the localhost, rather than the translated IP address
+        System.setProperty("java.rmi.server.hostname", "127.0.0.1");
+
+        // This RMI server should not keep the VM alive
+        Map<String, RMIExporter> env = new HashMap<String, RMIExporter>();
+        env.put(RMIExporter.EXPORTER_ATTRIBUTE, new HelloWorld());
+        MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+        JMXServiceURL url = new JMXServiceURL("rmi", "127.0.0.1", 11645);
+        server = JMXConnectorServerFactory.newJMXConnectorServer(url, env, mbs);
+        server.start();
+        ConnectorAddressLink.export(server.getAddress().toString());
     }
 
     Remote firstExported;
