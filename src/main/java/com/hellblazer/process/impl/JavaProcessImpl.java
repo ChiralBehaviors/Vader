@@ -1,18 +1,16 @@
-/** 
- * (C) Copyright 2011 Hal Hildebrand, all rights reserved.
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
+/** (C) Copyright 2011-2014 Chiral Behaviors, All Rights Reserved
  * 
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  * 
- * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *     
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, 
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
+ * See the License for the specific language governing permissions and 
+ * limitations under the License.
  */
 package com.hellblazer.process.impl;
 
@@ -379,6 +377,11 @@ public class JavaProcessImpl implements JavaProcess, Cloneable {
     }
 
     @Override
+    public String getStdErrTail(int numLines) throws IOException {
+        return process.getStdErrTail(numLines);
+    }
+
+    @Override
     public OutputStream getStdIn() {
         return process.getStdIn();
     }
@@ -389,13 +392,8 @@ public class JavaProcessImpl implements JavaProcess, Cloneable {
     }
 
     @Override
-    public String getStdOutTail(int numLines) {
+    public String getStdOutTail(int numLines) throws IOException {
         return process.getStdOutTail(numLines);
-    }
-
-    @Override
-    public String getStdErrTail(int numLines) {
-        return process.getStdErrTail(numLines);
     }
 
     /**
@@ -627,12 +625,28 @@ public class JavaProcessImpl implements JavaProcess, Cloneable {
     }
 
     /* (non-Javadoc)
+     * @see com.hellblazer.process.ManagedProcess#tailStdErr(org.apache.commons.io.input.TailerListener)
+     */
+    @Override
+    public Tailer tailStdErr(TailerListener listener) {
+        return process.tailStdErr(listener);
+    }
+
+    /* (non-Javadoc)
      * @see com.hellblazer.process.ManagedProcess#tailStdErr(org.apache.commons.io.input.TailerListener, long, boolean, boolean, int)
      */
     @Override
     public Tailer tailStdErr(TailerListener listener, long delayMillis,
                              boolean end, boolean reOpen, int bufSize) {
         return process.tailStdErr(listener, delayMillis, end, reOpen, bufSize);
+    }
+
+    /* (non-Javadoc)
+     * @see com.hellblazer.process.ManagedProcess#tailStdOut(org.apache.commons.io.input.TailerListener)
+     */
+    @Override
+    public Tailer tailStdOut(TailerListener listener) {
+        return process.tailStdOut(listener);
     }
 
     /* (non-Javadoc)
@@ -675,21 +689,5 @@ public class JavaProcessImpl implements JavaProcess, Cloneable {
             execution.add(javaClass);
         }
         return execution;
-    }
-
-    /* (non-Javadoc)
-     * @see com.hellblazer.process.ManagedProcess#tailStdErr(org.apache.commons.io.input.TailerListener)
-     */
-    @Override
-    public Tailer tailStdErr(TailerListener listener) {
-        return process.tailStdErr(listener);
-    }
-
-    /* (non-Javadoc)
-     * @see com.hellblazer.process.ManagedProcess#tailStdOut(org.apache.commons.io.input.TailerListener)
-     */
-    @Override
-    public Tailer tailStdOut(TailerListener listener) {
-        return process.tailStdOut(listener);
     }
 }

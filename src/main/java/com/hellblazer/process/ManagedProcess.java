@@ -1,18 +1,16 @@
-/** 
- * (C) Copyright 2011 Hal Hildebrand, all rights reserved.
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
+/** (C) Copyright 2011-2014 Chiral Behaviors, All Rights Reserved
  * 
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  * 
- * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *     
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, 
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
+ * See the License for the specific language governing permissions and 
+ * limitations under the License.
  */
 package com.hellblazer.process;
 
@@ -111,6 +109,17 @@ public interface ManagedProcess extends Serializable {
     InputStream getStdErr();
 
     /**
+     * Retrieve the tail of the Stderr stream on demand.
+     *
+     * @param numLines
+     *            The number of lines to retrieve from the tail of the StdErr
+     *            stream. Max = 4000
+     * @return numLines worth of output from the tail of the StdErr stream.
+     * @throws IOException
+     */
+    String getStdErrTail(int numLines) throws IOException;
+
+    /**
      * @return the OutputStream of the process' STD IN stream Output to the
      *         stream is piped into the standard input stream of the process
      * @exception IllegalThreadStateException
@@ -128,6 +137,17 @@ public interface ManagedProcess extends Serializable {
      *                <code>ManagedProcess</code> object has not yet started.
      */
     InputStream getStdOut();
+
+    /**
+     * Retrieve the tail of the Stdout stream on demand.
+     *
+     * @param numLines
+     *            The number of lines to retrieve from the tail of the StdOut
+     *            stream. Max = 4000
+     * @return numLines worth of output from the tail of the StdOut stream.
+     * @throws IOException
+     */
+    String getStdOutTail(int numLines) throws IOException;
 
     @Override
     int hashCode();
@@ -202,6 +222,8 @@ public interface ManagedProcess extends Serializable {
      */
     void stop(int waitForSeconds) throws CannotStopProcessException;
 
+    Tailer tailStdErr(TailerListener listener);
+
     /**
      * Add a listener to tail the STDERR stream
      * 
@@ -210,7 +232,7 @@ public interface ManagedProcess extends Serializable {
     Tailer tailStdErr(TailerListener listener, long delayMillis, boolean end,
                       boolean reOpen, int bufSize);
 
-    Tailer tailStdErr(TailerListener listener);
+    Tailer tailStdOut(TailerListener listener);
 
     /**
      * Add a listener to tail the STDOUT stream
@@ -219,24 +241,6 @@ public interface ManagedProcess extends Serializable {
      */
     Tailer tailStdOut(TailerListener listener, long delayMillis, boolean end,
                       boolean reOpen, int bufSize);
-
-    Tailer tailStdOut(TailerListener listener);
-
-    /**
-     * Retrieve the tail of the Stdout stream on demand.
-     *
-     * @param numLines The number of lines to retrieve from the tail of the StdOut stream. Max = 4000
-     * @return numLines worth of output from the tail of the StdOut stream.
-     */
-    String getStdOutTail(int numLines);
-
-    /**
-     * Retrieve the tail of the Stderr stream on demand.
-     *
-     * @param numLines The number of lines to retrieve from the tail of the StdErr stream. Max = 4000
-     * @return numLines worth of output from the tail of the StdErr stream.
-     */
-    String getStdErrTail(int numLines);
 
     /**
      * causes the current thread to wait, if necessary, until the process

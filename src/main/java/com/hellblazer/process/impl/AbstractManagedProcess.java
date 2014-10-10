@@ -1,37 +1,45 @@
-/** 
- * (C) Copyright 2011 Hal Hildebrand, all rights reserved.
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
+/** (C) Copyright 2011-2014 Chiral Behaviors, All Rights Reserved
  * 
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  * 
- * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *     
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, 
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. 
+ * See the License for the specific language governing permissions and 
+ * limitations under the License.
  */
 package com.hellblazer.process.impl;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FilenameFilter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.apache.commons.io.input.ReversedLinesFileReader;
 import org.apache.commons.io.input.Tailer;
 import org.apache.commons.io.input.TailerListener;
 
-import com.hellblazer.process.CachedFileTailer;
 import com.hellblazer.process.CannotStopProcessException;
 import com.hellblazer.process.ManagedProcess;
+import com.hellblazer.utils.Utils;
 
 /**
  * @author Hal Hildebrand
@@ -42,7 +50,9 @@ abstract public class AbstractManagedProcess implements ManagedProcess,
     public static final String  CONTROL_DIR_PREFIX           = ".control-";
     public static final int     DEFAULT_KILL_TIMEOUT_SECONDS = 10;
     public static final int     DEFAULT_PAUSE_MILLIS         = 500;
+    public static final int     MAX_TAIL_BUFFER_LINES        = 4000;
     private static final Logger log                          = Logger.getLogger(AbstractManagedProcess.class.getCanonicalName());
+
     private static final long   serialVersionUID             = 1L;
 
     public static UUID getIdFrom(File homeDirectory) {
@@ -88,24 +98,10 @@ abstract public class AbstractManagedProcess implements ManagedProcess,
     }
 
     public static void remove(File directory) throws IOException {
-        if (directory != null && directory.exists()) {
-            File[] files = directory.listFiles();
-            if (files != null) {
-                for (File file : files) {
-                    if (file.isDirectory()) {
-                        remove(file);
-                    } else {
-                        if (!file.delete()) {
-                            throw new IOException("Cannot delete file: "
-                                                  + file.getAbsolutePath());
-                        }
-                    }
-                }
-            }
-            if (!directory.delete()) {
-                throw new IOException("Cannot delete directory: "
-                                      + directory.getAbsolutePath());
-            }
+        Utils.clean(directory);
+        if (directory.exists() && !directory.delete()) {
+            throw new IOException(String.format("Cannot delete %s",
+                                                directory.getAbsolutePath()));
         }
     }
 
@@ -116,13 +112,8 @@ abstract public class AbstractManagedProcess implements ManagedProcess,
     protected File                directory;
 
     protected Map<String, String> environment;
-
     protected final UUID          id;
     protected volatile boolean    terminated = false;
-
-    protected CachedFileTailer stdOutCachedFileTailer;
-    protected CachedFileTailer stdErrCachedFileTailer;
-    public static final int MAX_TAIL_BUFFER_LINES = 4000;
 
     public AbstractManagedProcess() {
         this(UUID.randomUUID());
@@ -231,6 +222,31 @@ abstract public class AbstractManagedProcess implements ManagedProcess,
     }
 
     @Override
+    public String getStdErrTail(int numLines) throws IOException {
+        if (!getStdErrFile().exists()) {
+            throw new IllegalThreadStateException(
+                                                  "Process has not been started or has already exited");
+        }
+        List<String> lines = new ArrayList<>();
+        try (ReversedLinesFileReader reader = new ReversedLinesFileReader(
+                                                                          getStdErrFile())) {
+            int linesRead = 0;
+            String line;
+            while (((line = reader.readLine()) != null)
+                   && (linesRead++ < numLines)) {
+                lines.add(line);
+            }
+        }
+        Collections.reverse(lines);
+        StringBuilder builder = new StringBuilder();
+        for (String line : lines) {
+            builder.append(line);
+            builder.append('\n');
+        }
+        return builder.toString();
+    }
+
+    @Override
     public OutputStream getStdIn() {
         try {
             return new FileOutputStream(getStdInFile(), true);
@@ -248,6 +264,31 @@ abstract public class AbstractManagedProcess implements ManagedProcess,
             throw new IllegalThreadStateException(
                                                   "Process has not been started");
         }
+    }
+
+    @Override
+    public String getStdOutTail(int numLines) throws IOException {
+        if (!getStdOutFile().exists()) {
+            throw new IllegalThreadStateException(
+                                                  "Process has not been started or has already exited");
+        }
+        List<String> lines = new ArrayList<>();
+        try (ReversedLinesFileReader reader = new ReversedLinesFileReader(
+                                                                          getStdOutFile())) {
+            int linesRead = 0;
+            String line;
+            while (((line = reader.readLine()) != null)
+                   && (linesRead++ < numLines)) {
+                lines.add(line);
+            }
+        }
+        Collections.reverse(lines);
+        StringBuilder builder = new StringBuilder();
+        for (String line : lines) {
+            builder.append(line);
+            builder.append('\n');
+        }
+        return builder.toString();
     }
 
     @Override
@@ -383,10 +424,6 @@ abstract public class AbstractManagedProcess implements ManagedProcess,
                 return;
             }
         }
-
-        this.stdOutCachedFileTailer = new CachedFileTailer(getStdOutFile(), TimeUnit.SECONDS, 3, MAX_TAIL_BUFFER_LINES);
-        this.stdErrCachedFileTailer = new CachedFileTailer(getStdErrFile(), TimeUnit.SECONDS, 3, MAX_TAIL_BUFFER_LINES);
-
     }
 
     @Override
@@ -428,41 +465,6 @@ abstract public class AbstractManagedProcess implements ManagedProcess,
                              boolean end, boolean reOpen, int bufSize) {
         return Tailer.create(getStdOutFile(), listener, delayMillis, end,
                              reOpen, bufSize);
-    }
-
-    @Override
-    public String getStdOutTail(int numLines) {
-        if (!getStdOutFile().exists()) {
-            throw new IllegalThreadStateException(
-                    "Process has not been started or has already exited");
-        }
-        return readLogLinesBuffer(numLines, this.stdOutCachedFileTailer);
-    }
-
-    @Override
-    public String getStdErrTail(int numLines) {
-        if (!getStdErrFile().exists()) {
-            throw new IllegalThreadStateException(
-                    "Process has not been started or has already exited");
-        }
-        return readLogLinesBuffer(numLines, this.stdErrCachedFileTailer);
-    }
-
-    private String readLogLinesBuffer(int numLines, CachedFileTailer cachedFileTailer) {
-        try {
-            List<String> logLines = cachedFileTailer.getTailLines(numLines);
-            StringBuilder sb = new StringBuilder();
-            for (String logLine : logLines) {
-                sb.append(logLine).append("\n");
-            }
-            return sb.toString();
-
-        } catch (IOException e) {
-            if (log.isLoggable(Level.WARNING)) {
-                log.log(Level.WARNING, "Unable to read log lines", e);
-            }
-            return null;
-        }
     }
 
     @Override
