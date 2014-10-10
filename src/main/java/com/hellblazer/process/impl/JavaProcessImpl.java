@@ -14,33 +14,38 @@
  */
 package com.hellblazer.process.impl;
 
-import com.hellblazer.process.CannotStopProcessException;
-import com.hellblazer.process.JavaProcess;
-import com.hellblazer.process.ManagedProcess;
-import com.hellblazer.process.NoLocalJmxConnectionException;
-import com.sun.tools.attach.AttachNotSupportedException;
-import com.sun.tools.attach.VirtualMachine;
-import org.apache.commons.io.input.Tailer;
-import org.apache.commons.io.input.TailerListener;
-
-import javax.management.MBeanServerConnection;
-import javax.management.remote.JMXConnector;
-import javax.management.remote.JMXConnectorFactory;
-import javax.management.remote.JMXServiceURL;
-import javax.security.auth.Subject;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.ConnectException;
 import java.net.MalformedURLException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.UUID;
+
+import javax.management.MBeanServerConnection;
+import javax.management.remote.JMXConnector;
+import javax.management.remote.JMXConnectorFactory;
+import javax.management.remote.JMXServiceURL;
+import javax.security.auth.Subject;
+
+import org.apache.commons.io.input.Tailer;
+import org.apache.commons.io.input.TailerListener;
+
+import com.hellblazer.process.CannotStopProcessException;
+import com.hellblazer.process.JavaProcess;
+import com.hellblazer.process.ManagedProcess;
+import com.hellblazer.process.NoLocalJmxConnectionException;
+import com.sun.tools.attach.AttachNotSupportedException;
+import com.sun.tools.attach.VirtualMachine;
 
 /**
  * @author Hal Hildebrand
  * 
- */
-@SuppressWarnings("restriction")
+ */ 
 public class JavaProcessImpl implements JavaProcess, Cloneable {
     private static final long        serialVersionUID = 1L;
     protected List<String>           arguments;
@@ -279,12 +284,6 @@ public class JavaProcessImpl implements JavaProcess, Cloneable {
             throw cex;
         } catch (AttachNotSupportedException e) {
             throw new RuntimeException(e);
-        }
-
-        if (address == null) {
-            throw new NoLocalJmxConnectionException(
-                                                    "Local JMX connector address does not exist for: "
-                                                            + this);
         }
 
         JMXServiceURL jmxUrl;
