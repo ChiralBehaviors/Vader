@@ -53,13 +53,13 @@ public interface JavaProcess extends ManagedProcess {
      */
     File getJavaExecutable();
 
-    JMXConnector getLocalJmxConnector() throws ConnectException,
+    JMXConnector getLocalJmxConnector(String connectionName) throws ConnectException,
                                        NoLocalJmxConnectionException;
 
-    MBeanServerConnection getLocalMBeanServerConnection() throws IOException,
+    MBeanServerConnection getLocalMBeanServerConnection(String connectionName) throws IOException,
                                                          NoLocalJmxConnectionException;
 
-    MBeanServerConnection getLocalMBeanServerConnection(Subject delegationSubject)
+    MBeanServerConnection getLocalMBeanServerConnection(String connectionName, Subject delegationSubject)
                                                                                   throws ConnectException,
                                                                                   NoLocalJmxConnectionException;
 

@@ -16,6 +16,14 @@
  */
 package com.hellblazer.process;
 
+import com.sun.jmx.remote.internal.RMIExporter;
+import sun.rmi.server.UnicastServerRef;
+import sun.rmi.server.UnicastServerRef2;
+
+import javax.management.MBeanServer;
+import javax.management.remote.JMXConnectorServer;
+import javax.management.remote.JMXConnectorServerFactory;
+import javax.management.remote.JMXServiceURL;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.lang.management.ManagementFactory;
@@ -28,17 +36,6 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.HashMap;
 import java.util.Map;
 
-import javax.management.MBeanServer;
-import javax.management.remote.JMXConnectorServer;
-import javax.management.remote.JMXConnectorServerFactory;
-import javax.management.remote.JMXServiceURL;
-
-import sun.management.ConnectorAddressLink;
-import sun.rmi.server.UnicastServerRef;
-import sun.rmi.server.UnicastServerRef2;
-
-import com.sun.jmx.remote.internal.RMIExporter;
-
 /**
  * @author Hal Hildebrand
  * 
@@ -47,6 +44,7 @@ import com.sun.jmx.remote.internal.RMIExporter;
 public class HelloWorld implements RMIExporter {
 
     public static final String STARTUP_MSG = "HelloWorld startup successful";
+    public static final String JMX_CONNECTION_NAME = "com.salesforce.helloworld.jmx";
 
     static void bindJmx() throws Exception {
         JMXConnectorServer server;
@@ -63,7 +61,8 @@ public class HelloWorld implements RMIExporter {
         JMXServiceURL url = new JMXServiceURL("rmi", "127.0.0.1", 11645);
         server = JMXConnectorServerFactory.newJMXConnectorServer(url, env, mbs);
         server.start();
-        ConnectorAddressLink.export(server.getAddress().toString());
+
+        System.setProperty(JMX_CONNECTION_NAME, server.getAddress().toString());
     }
 
     public static void main(String[] argv) throws Exception {

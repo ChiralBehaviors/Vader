@@ -16,32 +16,27 @@
  */
 package com.hellblazer.process.impl;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.ConnectException;
-import java.net.MalformedURLException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import com.hellblazer.process.CannotStopProcessException;
+import com.hellblazer.process.JavaProcess;
+import com.hellblazer.process.ManagedProcess;
+import com.hellblazer.process.NoLocalJmxConnectionException;
+import com.sun.tools.attach.AttachNotSupportedException;
+import com.sun.tools.attach.VirtualMachine;
+import org.apache.commons.io.input.Tailer;
+import org.apache.commons.io.input.TailerListener;
 
 import javax.management.MBeanServerConnection;
 import javax.management.remote.JMXConnector;
 import javax.management.remote.JMXConnectorFactory;
 import javax.management.remote.JMXServiceURL;
 import javax.security.auth.Subject;
-
-import org.apache.commons.io.input.Tailer;
-import org.apache.commons.io.input.TailerListener;
-
-import sun.management.ConnectorAddressLink;
-
-import com.hellblazer.process.CannotStopProcessException;
-import com.hellblazer.process.JavaProcess;
-import com.hellblazer.process.ManagedProcess;
-import com.hellblazer.process.NoLocalJmxConnectionException;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.ConnectException;
+import java.net.MalformedURLException;
+import java.util.*;
 
 /**
  * @author Hal Hildebrand
@@ -257,7 +252,7 @@ public class JavaProcessImpl implements JavaProcess, Cloneable {
      * @throws ConnectException
      */
     @Override
-    public JMXConnector getLocalJmxConnector() throws ConnectException,
+    public JMXConnector getLocalJmxConnector(String connectorName) throws ConnectException,
                                               NoLocalJmxConnectionException {
         if (jmxc != null) {
             return jmxc;
@@ -271,13 +266,21 @@ public class JavaProcessImpl implements JavaProcess, Cloneable {
 
         String address;
         try {
-            address = ConnectorAddressLink.importFrom(process.getPid());
+            VirtualMachine vm = VirtualMachine.attach("" + process.getPid());
+            Properties props = vm.getSystemProperties();
+            address = props.getProperty(connectorName);
+
+            if (address == null) {
+                throw new ConnectException("Unable to find address for remote JMX connection with name = " + connectorName);
+            }
         } catch (IOException e) {
             ConnectException cex = new ConnectException(
                                                         "Cannot obtain local JMX connector address of: "
                                                                 + this);
             cex.initCause(e);
             throw cex;
+        } catch (AttachNotSupportedException e) {
+            throw new RuntimeException(e);
         }
 
         if (address == null) {
@@ -332,10 +335,10 @@ public class JavaProcessImpl implements JavaProcess, Cloneable {
     }
 
     @Override
-    public MBeanServerConnection getLocalMBeanServerConnection()
+    public MBeanServerConnection getLocalMBeanServerConnection(String connectionName)
                                                                 throws ConnectException,
                                                                 NoLocalJmxConnectionException {
-        JMXConnector connector = getLocalJmxConnector();
+        JMXConnector connector = getLocalJmxConnector(connectionName);
 
         try {
             return connector.getMBeanServerConnection();
@@ -349,10 +352,10 @@ public class JavaProcessImpl implements JavaProcess, Cloneable {
     }
 
     @Override
-    public MBeanServerConnection getLocalMBeanServerConnection(Subject delegationSubject)
+    public MBeanServerConnection getLocalMBeanServerConnection(String connectionName, Subject delegationSubject)
                                                                                          throws ConnectException,
                                                                                          NoLocalJmxConnectionException {
-        JMXConnector connector = getLocalJmxConnector();
+        JMXConnector connector = getLocalJmxConnector(connectionName);
 
         try {
             return connector.getMBeanServerConnection(delegationSubject);
