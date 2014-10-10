@@ -42,7 +42,7 @@ import java.util.Map;
 public class HelloWorld implements RMIExporter {
 
     public static final String STARTUP_MSG = "HelloWorld startup successful";
-    public static final String JMX_CONNECTION_NAME = "com.salesforce.helloworld.jmx";
+    public static final String JMX_CONNECTION_NAME = "com.chiralbehaviors.helloworld.jmx";
 
     static void bindJmx() throws Exception {
         JMXConnectorServer server;
