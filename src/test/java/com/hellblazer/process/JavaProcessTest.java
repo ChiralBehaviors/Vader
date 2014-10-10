@@ -134,7 +134,7 @@ public class JavaProcessTest extends ProcessTest {
                 @Override
                 public boolean isTrue() {
                     try {
-                        connection = process.getLocalMBeanServerConnection();
+                        connection = process.getLocalMBeanServerConnection(HelloWorld.JMX_CONNECTION_NAME);
                         return true;
                     } catch (ConnectException e) {
                         return false;
