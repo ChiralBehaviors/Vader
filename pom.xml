@@ -5,7 +5,7 @@
 	<groupId>com.hellblazer</groupId>
 	<artifactId>process-control</artifactId>
 	<name>Process control in Java</name>
-	<version>0.0.5-SNAPSHOT</version>
+	<version>0.0.5</version>
 
 	<repositories>
 		<repository>
@@ -66,7 +66,7 @@
 		<dependency>
 			<groupId>com.hellblazer</groupId>
 			<artifactId>utils</artifactId>
-			<version>0.0.5-SNAPSHOT</version>
+			<version>0.0.5</version>
 		</dependency>
         <dependency>
             <groupId>com.sun</groupId>
