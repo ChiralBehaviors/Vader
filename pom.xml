@@ -5,13 +5,17 @@
 	<groupId>com.hellblazer</groupId>
 	<artifactId>process-control</artifactId>
 	<name>Process control in Java</name>
-	<version>0.0.5</version>
+	<version>0.0.6-SNAPSHOT</version>
 
 	<repositories>
 		<repository>
 			<id>hellblazer-snapshots</id>
 			<url>http://repository-chiralbehaviors.forge.cloudbees.com/snapshot/</url>
 		</repository>
+        <repository>
+            <id>hellblazer-release</id>
+            <url>http://repository-chiralbehaviors.forge.cloudbees.com/release/</url>
+        </repository>
 	</repositories>
 
 	<build>
